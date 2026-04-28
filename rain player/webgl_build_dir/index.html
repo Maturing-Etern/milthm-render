@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Unity Web Player | Rain Player</title>
+    <link rel="shortcut icon" href="TemplateData/favicon.ico">
+    <link rel="stylesheet" href="TemplateData/style.css">
+  </head>
+  <body>
+    <div id="unity-container" class="unity-desktop">
+      <canvas id="unity-canvas" width=960 height=600 tabindex="-1"></canvas>
+      <div id="unity-loading-bar">
+        <div id="unity-logo"></div>
+        <div id="unity-progress-bar-empty">
+          <div id="unity-progress-bar-full"></div>
+        </div>
+      </div>
+      <div id="unity-warning"> </div>
+      <div id="unity-footer">
+        <div id="unity-logo-title-footer"></div>
+        <div id="unity-fullscreen-button"></div>
+        <div id="unity-build-title">Rain Player</div>
+      </div>
+    </div>
+    <script>
+      var canvas = document.querySelector("#unity-canvas");
+
+      // Shows a temporary message banner/ribbon for a few seconds, or
+      // a permanent error message on top of the canvas if type=='error'.
+      function unityShowBanner(msg, type) {
+        var warningBanner = document.querySelector("#unity-warning");
+        function updateBannerVisibility() {
+          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
+        }
+        var div = document.createElement('div');
+        div.innerHTML = msg;
+        warningBanner.appendChild(div);
+        if (type == 'error') div.style = 'background: red; padding: 10px;';
+        else {
+          if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
+          setTimeout(function() {
+            warningBanner.removeChild(div);
+            updateBannerVisibility();
+          }, 5000);
+        }
+        updateBannerVisibility();
+      }
+
+      var buildUrl = "Build";
+      var loaderUrl = buildUrl + "/wbb12.loader.js";
+      var config = {
+        arguments: [],
+        dataUrl: buildUrl + "/wbb12.data",
+        frameworkUrl: buildUrl + "/wbb12.framework.js",
+        codeUrl: buildUrl + "/wbb12.wasm",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "DefaultCompany",
+        productName: "Rain Player",
+        productVersion: "1.0",
+        showBanner: unityShowBanner,
+      };
+
+      // 从 URL 参数获取配置
+      var urlParams = new URLSearchParams(window.location.search);
+
+      // 如果有谱面 URL，传递给 Unity
+      var chartUrl = urlParams.get('chartUrl');
+      if (chartUrl) {
+        // chartUrl 作为参数传递给 Unity
+        config.arguments = config.arguments || [];
+        config.arguments.push('--chart-url');
+        config.arguments.push(chartUrl);
+
+        // 其他可选参数
+        if (urlParams.get('autoPlay') !== null) {
+          config.arguments.push('--auto-play');
+        }
+        if (urlParams.get('flowSpeed')) {
+          config.arguments.push('--flow-speed');
+          config.arguments.push(urlParams.get('flowSpeed'));
+        }
+        if (urlParams.get('noteSize')) {
+          config.arguments.push('--note-size');
+          config.arguments.push(urlParams.get('noteSize'));
+        }
+        if (urlParams.get('speed')) {
+          config.arguments.push('--speed');
+          config.arguments.push(urlParams.get('speed'));
+        }
+      }
+
+      // 移动端适配
+      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        var meta = document.createElement('meta');
+        meta.name = 'viewport';
+        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
+        document.getElementsByTagName('head')[0].appendChild(meta);
+        document.querySelector("#unity-container").className = "unity-mobile";
+        canvas.className = "unity-mobile";
+      } else {
+        canvas.style.width = "960px";
+        canvas.style.height = "600px";
+      }
+
+      document.querySelector("#unity-loading-bar").style.display = "block";
+
+      // 调试信息
+      var debugEl = document.createElement('div');
+      debugEl.id = 'debug-info';
+      debugEl.style.cssText = 'position:fixed;top:5px;left:5px;background:rgba(0,0,0,0.8);color:#0f0;font-size:12px;padding:8px;border-radius:6px;z-index:99999;display:none;max-width:300px;';
+      debugEl.innerHTML = 'RainPlayer 状态: <span id="debug-status">初始化中...</span><br>';
+      document.body.appendChild(debugEl);
+
+      function setDebug(msg) {
+        console.log('[RainPlayer]', msg);
+        var el = document.getElementById('debug-status');
+        if (el) el.textContent = msg;
+        debugEl.style.display = 'block';
+      }
+
+      // 备用播放按钮（点击触发播放）
+      var playOverlay = null;
+      function showPlayButton() {
+        if (playOverlay) return;
+        playOverlay = document.createElement('button');
+        playOverlay.textContent = '▶ 点击开始播放';
+        playOverlay.style.cssText = [
+          'position:fixed', 'top:50%', 'left:50%',
+          'transform:translate(-50%,-50%)',
+          'padding:20px 40px', 'font-size:24px',
+          'background:rgba(255,100,150,0.9)',
+          'color:white', 'border:none', 'border-radius:20px',
+          'cursor:pointer', 'z-index:99998',
+          'box-shadow:0 4px 20px rgba(0,0,0,0.5)',
+          'display:none'
+        ].join(';');
+        playOverlay.onclick = function() {
+          // 模拟点击 canvas，触发 Unity 内部播放
+          canvas.focus();
+          canvas.click();
+          // 尝试 SendMessage
+          var targets = [
+            ['GameController', 'StartGame'],
+            ['ChartPlayer', 'StartGame'],
+            ['GameManager', 'StartGame'],
+            ['RainPlayer', 'StartGame'],
+          ];
+          targets.forEach(function(t) {
+            try { unityInstance.SendMessage(t[0], t[1]); } catch(e) {}
+          });
+          playOverlay.style.display = 'none';
+          setDebug('已触发播放!');
+        };
+        document.body.appendChild(playOverlay);
+        // 延迟显示备用按钮
+        setTimeout(function() {
+          if (playOverlay && playOverlay.style.display !== 'none') {
+            playOverlay.style.display = 'block';
+          }
+        }, 3000);
+      }
+
+      var script = document.createElement("script");
+      var unityInstance = null;
+
+      script.src = loaderUrl;
+      script.onload = () => {
+        createUnityInstance(canvas, config, (progress) => {
+          var bar = document.querySelector("#unity-progress-bar-full");
+          if (bar) bar.style.width = (100 * progress) + "%";
+        }).then((instance) => {
+          unityInstance = instance;
+          document.querySelector("#unity-loading-bar").style.display = "none";
+          setDebug('Unity 已加载完成');
+          document.querySelector("#unity-fullscreen-button").onclick = () => {
+            unityInstance.SetFullscreen(1);
+          };
+
+          // 通知父窗口：播放器已加载
+          window.dispatchEvent(new Event('rain_player_chart_player_loaded'));
+
+          // 显示备用播放按钮（如果自动播放失败可点击）
+          showPlayButton();
+
+          // 尝试多种常见的 Unity 播放方法名
+          function tryAutoPlay() {
+            if (!unityInstance) return;
+            setDebug('尝试发送播放命令...');
+
+            // 常见的方法名组合，逐一尝试
+            var methods = [
+              ['GameController', 'StartGame'],
+              ['GameController', 'OnGameStart'],
+              ['GameController', 'BeginPlay'],
+              ['ChartPlayer', 'StartGame'],
+              ['ChartPlayer', 'Start'],
+              ['GameManager', 'StartGame'],
+              ['RainPlayer', 'StartGame'],
+            ];
+
+            methods.forEach(function(m) {
+              try {
+                unityInstance.SendMessage(m[0], m[1]);
+                console.log('[RainPlayer] SendMessage:', m[0] + '.' + m[1]);
+              } catch(e) {}
+            });
+
+            // 同时模拟点击 canvas
+            try {
+              canvas.focus();
+              canvas.click();
+            } catch(e) {}
+
+            // 如果有播放覆盖按钮，自动触发它
+            if (playOverlay && playOverlay.style.display === 'block') {
+              playOverlay.click();
+              setDebug('已自动触发播放!');
+            }
+
+            setDebug('播放命令已发送，等待响应...');
+          }
+
+          // 延迟自动播放（等待谱面数据加载）
+          var urlParams = new URLSearchParams(window.location.search);
+          if (urlParams.get('startImmediately') !== null || urlParams.get('autoPlay') !== null) {
+            // 多次尝试，给 Unity 足够时间初始化
+            setTimeout(tryAutoPlay, 1000);
+            setTimeout(tryAutoPlay, 2000);
+            setTimeout(tryAutoPlay, 3000);
+          }
+
+        }).catch((message) => {
+          alert(message);
+          window.dispatchEvent(new CustomEvent('rain_player_error', { detail: { message: message } }));
+          window.dispatchEvent(new Event('rain_player_chart_player_load_failed'));
+        });
+      };
+
+      // 监听来自父窗口的消息
+      window.addEventListener('message', (event) => {
+        if (!unityInstance) return;
+        var data = event.data;
+        if (!data || typeof data !== 'object') return;
+
+        console.log('[RainPlayer] 收到消息:', data);
+
+        // 处理播放命令
+        if (data.type === 'play' || data.command === 'start') {
+          setDebug('收到播放命令，正在发送...');
+          var targets = [
+            ['GameController', 'StartGame'],
+            ['ChartPlayer', 'StartGame'],
+            ['GameManager', 'StartGame'],
+            ['RainPlayer', 'StartGame'],
+            ['GameController', 'OnGameStart'],
+          ];
+          targets.forEach(function(t) {
+            try {
+              unityInstance.SendMessage(t[0], t[1]);
+            } catch(e) {}
+          });
+        }
+
+        // 处理设置参数
+        if (data.type === 'setting' && data.key && data.value !== undefined) {
+          unityInstance.SendMessage('GameController', 'SetSetting', JSON.stringify({ key: data.key, value: data.value }));
+        }
+
+        if (data.type === 'settings' && data.settings) {
+          unityInstance.SendMessage('GameController', 'ApplySettings', JSON.stringify(data.settings));
+        }
+
+        // 处理暂停
+        if (data.type === 'pause') {
+          unityInstance.SendMessage('GameController', 'PauseGame');
+        }
+      });
+
+      // 监听控制台错误并转发给父窗口
+      window.onerror = function(msg, url, line, col, error) {
+        console.error('[RainPlayer] 错误:', msg);
+        // 如果是谱面相关错误，转发给父窗口
+        if (msg && (msg.includes('meta.json') || msg.includes('chart') || msg.includes('Exception'))) {
+          window.parent.postMessage({
+            type: 'error',
+            code: 'CHART_ERROR',
+            message: msg
+          }, '*');
+        }
+        return false;
+      };
+
+      // 监听 Unity 发出的错误日志
+      console.error = (function(original) {
+        return function(msg) {
+          if (typeof msg === 'string' && (msg.includes('Exception') || msg.includes('meta.json') || msg.includes('chart'))) {
+            window.parent.postMessage({
+              type: 'error',
+              code: 'CHART_ERROR',
+              message: msg
+            }, '*');
+          }
+          original.apply(console, arguments);
+        };
+      })(console.error);
+
+      document.body.appendChild(script);
+    </script>
+  </body>
+</html>

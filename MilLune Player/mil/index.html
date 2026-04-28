@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>分数计算器</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #121212;
+      color: #ffffff;
+      margin: 0;
+    }
+
+    header,
+    footer {
+      text-align: center;
+      padding: 1rem;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      margin: 0.5rem 0;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 1rem;
+    }
+
+    section {
+      margin-bottom: 1.5rem;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+    }
+
+    textarea,
+    input,
+    select {
+      width: 100%;
+      background-color: #2a2a2a;
+      color: #ffffff;
+      border: 1px solid #3a3a3a;
+      border-radius: 4px;
+      padding: 0.5rem;
+      font-size: 1rem;
+    }
+
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .btn-group.center {
+      justify-content: center;
+    }
+
+    button {
+      background-color: #333333;
+      color: #ffffff;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    button:hover {
+      background-color: #444444;
+    }
+
+    .result {
+      margin-top: 1rem;
+      background-color: #333333;
+      padding: 1rem;
+      border-radius: 4px;
+    }
+
+    .result p {
+      margin-bottom: 0.5rem;
+    }
+
+    .tab-buttons {
+      display: flex;
+      margin-bottom: 1rem;
+    }
+
+    .tab-buttons button {
+      flex: 1;
+    }
+
+    .tab-buttons button.active {
+      background-color: #444444;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .chart-inputs {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .chart-inputs label {
+      margin-bottom: 0.25rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      background-color: #2a2a2a;
+    }
+
+    th,
+    td {
+      padding: 0.5rem;
+      text-align: left;
+      border: 1px solid #3a3a3a;
+    }
+
+    th {
+      background-color: #333333;
+    }
+
+    .muted {
+      text-align: center;
+      color: #bdbdbd;
+      margin-top: -0.25rem;
+      margin-bottom: 1rem;
+      font-size: 0.95rem;
+    }
+
+    .progress-wrap {
+      margin-top: 1rem;
+      width: 100%;
+      height: 12px;
+      background-color: #2a2a2a;
+      border: 1px solid #3a3a3a;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      background-color: #55d67a;
+    }
+
+    .result-item {
+      margin-top: 1rem;
+      background-color: #2a2a2a;
+      padding: 1rem;
+      border-radius: 4px;
+      border: 1px solid #3a3a3a;
+    }
+
+    .result-head {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.5rem;
+      color: #cccccc;
+      font-size: 0.95rem;
+    }
+
+    .result-seq,
+    #devBox,
+    #progressText {
+      word-break: break-all;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    .token {
+      display: inline;
+    }
+
+    .token.hit {
+      color: #55d67a;
+      font-weight: bold;
+    }
+
+    #results {
+      margin-top: 1rem;
+    }
+
+    #devBox {
+      white-space: pre-wrap;
+      max-height: 360px;
+      overflow: auto;
+    }
+
+    @media (max-width: 720px) {
+      .chart-inputs {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <h1>分数计算器</h1>
+    </header>
+    <div id="engineStatus" class="muted">WASM 加载中…</div>
+
+    <div class="tab-buttons">
+      <button class="active" data-tab="home" onclick="showTab('home')">主页</button>
+      <button data-tab="finder" onclick="showTab('finder')">查找目标分</button>
+    </div>
+
+    <div id="home" class="tab-content active">
+      <section>
+        <label for="keyInput">输入判定序列：</label>
+        <textarea id="keyInput"></textarea>
+        <div class="btn-group center">
+          <button onclick="calculateFromInput()">计算分数</button>
+        </div>
+      </section>
+      <div id="result" class="result" style="display: none;">
+        <p id="totalNotes">总音符数：0</p>
+        <p id="maxCombo">最大连击数：0</p>
+        <p id="score">最终得分：0</p>
+        <p id="detail">各判定数量：0</p>
+        <p id="comboMult">连击倍率comboMult：0</p>
+        <p id="totalAccScore">总准度分totalAccScore：0</p>
+        <p id="totalComboScore">总连击分totalComboScore：0</p>
+        <p id="bMax">bMax值：0</p>
+      </div>
+      <div id="devBox" class="result">等待计算</div>
+    </div>
+
+    <div id="finder" class="tab-content">
+      <section>
+        <label for="noteCount">物量（判定序列长度）：</label>
+        <input id="noteCount" type="number" min="1" step="1" value="2025">
+      </section>
+      <section>
+        <label for="targetScore">目标分数：</label>
+        <input id="targetScore" type="number" min="0" step="1" value="1002025">
+        <div class="btn-group center">
+          <button id="startBtn">开始搜索</button>
+          <button id="pauseBtn">暂停</button>
+          <button id="clearBtn">清空</button>
+        </div>
+      </section>
+
+      <div class="result">
+        <p id="searchState">状态：等待开始</p>
+        <p id="foundCountLine">已找到：<span id="foundCount">0</span></p>
+        <p id="progressText">等待开始</p>
+        <div class="progress-wrap">
+          <div id="progressBar" class="progress-bar"></div>
+        </div>
+      </div>
+
+      <div id="results"></div>
+    </div>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+
+</html>

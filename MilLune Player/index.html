@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>雨之韵律 · Milthm 谱面播放器</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+<div class="static-bg"></div>
+<div class="bg-overlay"></div>
+<canvas id="rain-canvas"></canvas>
+
+<div class="app-container">
+    <!-- 导航栏 -->
+    <div class="navbar">
+        <div class="logo">
+            <span class="logo-icon">🌧️</span>
+            <span class="logo-text">MilLune Player</span>
+        </div>
+        <div class="controls">
+            <label class="upload-btn">
+                📁 选择谱面
+                <input type="file" id="file-input" accept=".zip,.json">
+            </label>
+            <span id="fileName" class="file-info">未选择文件</span>
+
+            <div class="ratio-control">
+                <label>📐 比例</label>
+                <select id="presetRatio" class="ratio-select">
+                    <option value="16:9">16:9</option>
+                    <option value="4:3">4:3</option>
+                    <option value="1:1">1:1</option>
+                    <option value="21:9">21:9</option>
+                </select>
+            </div>
+            <div class="custom-ratio-input">
+                <input type="text" id="customW" placeholder="宽" value="16">
+                <span style="color:var(--rain-teal);font-weight:600;">:</span>
+                <input type="text" id="customH" placeholder="高" value="9">
+                <button id="applyRatio">应用</button>
+            </div>
+
+            <div class="checkbox-wrapper" style="margin-left: 10px;">
+                <input type="checkbox" id="check-autoplay">
+                <span>自动演示</span>
+            </div>
+
+            <div class="action-buttons">
+                <button id="playBtn" class="action-btn play">▶️ 播放</button>
+                <button id="reloadBtn" class="action-btn reset">🔄 重置</button>
+                <button id="fullscreenBtn" class="action-btn fullscreen" title="全屏/退出 (F11)">⛶ 全屏</button>
+                <button id="stopBtn" class="action-btn stop" title="结束播放">⏹️ 停止</button>
+            </div>
+
+            <button id="infoBtn" class="info-link">📋 格式说明</button>
+        </div>
+    </div>
+
+    <!-- 播放区域 -->
+    <div class="player-area" id="playerArea">
+        <div id="gameFrame" class="game-frame" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+            <!-- 游戏画布将放置在这里 -->
+            <canvas id="main-canvas" style="display: none; max-width: 100%; max-height: 100%;"></canvas>
+            <!-- 初始提示 -->
+            <div id="initialPrompt" style="text-align: center; color: rgba(44,62,80,0.45);padding: 2rem;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">🎵</div>
+                <p style="font-size: 1.05rem;font-weight:500;color:#2c3e50;">选择 Milthm 谱面文件开始游玩</p>
+                <p style="font-size: 0.8rem; margin-top: 0.5rem;color:rgba(0,0,0,0.45);">支持 .zip / .json 格式</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 状态栏 -->
+    <div class="status-bar">
+        <span class="status-msg" id="statusMsg">💧 等待选择谱面文件</span>
+        <div class="status-indicator"></div>
+    </div>
+</div>
+
+<!-- 弹窗 -->
+<div id="infoModal" class="modal">
+    <div class="modal-content">
+        <h3>📋 谱面格式要求</h3>
+        <p>MilLune Player 需要 <strong>Milthm 标准格式</strong> 的谱面包。</p>
+        <p>ZIP 文件必须包含：</p>
+        <p>• <code>meta.json</code> - 谱面元数据</p>
+        <p>• <code>music.ogg</code> 或 <code>music.mp3</code> - 音频文件</p>
+        <p>• <code>chart/*.json</code> - 谱面数据</p>
+        <p style="margin-top: 1rem;">💡 提示：使用 Rain Editor 导出谱面</p>
+        <button class="modal-close" id="closeModal">明白了</button>
+    </div>
+</div>
+
+<!-- Level选择弹窗 -->
+<div id="level-select-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center;">
+    <div id="level-select-content" style="background: white; padding: 2rem; border-radius: var(--radius-lg); max-width: 500px; width: 90%;">
+        <h3>选择难度</h3>
+        <div id="level-list"></div>
+    </div>
+</div>
+
+<!-- 游戏内加载遮罩 -->
+<div id="game-loading-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; justify-content: center; align-items: center; color: white; flex-direction: column;">
+    <div class="spinner" style="width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: white; animation: spin 1s linear infinite;"></div>
+    <div class="loading-text" style="margin-top: 1rem;">正在初始化播放器...</div>
+</div>
+
+<!-- 结算面板 -->
+<div id="resultModal" class="result-modal">
+    <!-- 雨滴背景 -->
+    <div class="rain-drops" id="rainDrops"></div>
+    <div class="rain-overlay"></div>
+    <div class="result-card">
+        <!-- 左侧曲绘区 -->
+        <div class="result-cover">
+            <img id="resultSongCover" src="" alt="曲绘">
+            <div class="result-cover-overlay"></div>
+            <div class="result-song-meta">
+                <div id="resultSongTitle" class="result-song-title">未加载曲目</div>
+                <div id="resultSongArtist" class="result-song-artist"></div>
+                <div id="resultSongDifficulty" class="result-song-diff">难度: -</div>
+                <div id="resultSongCharter" class="result-song-charter"></div>
+            </div>
+        </div>
+
+        <!-- 右侧数据区 -->
+        <div class="result-data">
+            <!-- 顶部：分数 + 准确度 + 评级 -->
+            <div class="result-top-row">
+                <div class="result-score-block">
+                    <div class="result-score-label">SCORE</div>
+                    <div class="result-score-value" id="resultScoreVal">0</div>
+                </div>
+                <div class="result-acc-block">
+                    <div class="result-acc-label">ACCURACY</div>
+                    <div class="result-acc-value" id="resultAccVal">0.00%</div>
+                </div>
+                <div class="result-grade-block">
+                    <div class="result-grade-badge" id="resultGradeVal">F</div>
+                    <div class="result-bonus" id="resultBonus" style="display:none;">+0</div>
+                </div>
+            </div>
+
+            <!-- 完成状态 -->
+            <div class="result-status">
+                <span id="resultStatusVal" class="result-status-text">未完成</span>
+            </div>
+
+            <!-- 判定详情 -->
+            <div class="result-judgments">
+                <div class="judgment-row judgment-perfect">
+                    <span class="judgment-tag">PERFECT</span>
+                    <span class="judgment-bar"></span>
+                    <span class="judgment-nums"><span id="detailPerfectLarge">0</span>(<span id="detailPerfectAll">0</span>)</span>
+                </div>
+                <div class="judgment-row judgment-good">
+                    <span class="judgment-tag">GOOD</span>
+                    <span class="judgment-bar"></span>
+                    <span class="judgment-nums"><span id="detailGood">0</span>(<span id="detailGoodAll">0</span>)</span>
+                </div>
+                <div class="judgment-row judgment-badmiss">
+                    <span class="judgment-tag">BAD / MISS</span>
+                    <span class="judgment-bar"></span>
+                    <span class="judgment-nums"><span id="detailBad">0</span>/<span id="detailMiss">0</span></span>
+                </div>
+            </div>
+
+            <!-- 按钮 -->
+            <div class="result-actions">
+                <button id="resultRetryBtn" class="result-btn retry-btn">再来一次</button>
+                <button id="resultCloseBtn" class="result-btn close-btn">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- JSZip 用于解析 ZIP (CDN 引入，轻量) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<script>
+(function() {
+    // ========== 雨滴特效 - 内存优化版 ==========
+    const canvas = document.getElementById('rain-canvas');
+    const ctx = canvas.getContext('2d', { alpha: true });
+
+    // 预计算颜色池（避免每帧创建字符串）
+    const COLOR_POOL = [
+        'rgba(142,197,252,',
+        'rgba(41,168,185,',
+        'rgba(128,178,228,',
+        'rgba(180,215,235,'
+    ];
+    const COLOR_SUFFIX = ')';
+
+    // 预计算的随机偏移（避免draw中调用Math.random）
+    const SHAKE_TABLE = new Float32Array(32);
+    for (let i = 0; i < 32; i++) SHAKE_TABLE[i] = Math.random() * 1.5 - 0.75;
+
+    let width = 0, height = 0;
+    let raindrops = null;          // TypedArray 存储雨滴数据
+    let dropColors = null;         // 预构建的颜色字符串数组
+    let shakeIdx = 0;              // 抖动索引
+    let animFrameId = 0;           // 动画帧ID，用于取消
+    let isPaused = false;          // 页面不可见时暂停
+
+    const RAIN_COUNT = 120;         // 稍微减少数量（视觉差异不大）
+
+    // 使用 Float32Array 存储雨滴属性：[x, y, length, speed, opacity, colorIdx]
+    // 每个雨滴6个float，连续存储，缓存友好
+    const STRIDE = 6;
+
+    function resizeCanvas() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+    }
+
+    function initRain() {
+        raindrops = new Float32Array(RAIN_COUNT * STRIDE);
+        dropColors = new Array(RAIN_COUNT);
+
+        for (let i = 0; i < RAIN_COUNT; i++) {
+            const base = i * STRIDE;
+            raindrops[base + 0] = Math.random() * width;                          // x
+            raindrops[base + 1] = Math.random() * height * 1.2 - height * 0.2;     // y
+            raindrops[base + 2] = Math.random() * 20 + 10;                         // length
+            raindrops[base + 3] = Math.random() * 7 + 3;                          // speed
+            const opacity = Math.random() * 0.35 + 0.15;
+            raindrops[base + 4] = opacity;                                         // opacity
+            const cidx = Math.random() < 0.4 ? 0 : Math.random() < 0.5 ? 1 : Math.random() < 0.8 ? 2 : 3;
+            raindrops[base + 5] = cidx;                                           // colorIdx
+            // 预构建完整颜色字符串
+            const extra = (cidx === 3) ? 0.1 : 0;
+            dropColors[i] = COLOR_POOL[cidx] + (opacity + extra).toFixed(3) + COLOR_SUFFIX;
+        }
+    }
+
+    function updateAndDraw() {
+        if (!ctx || isPaused) { animFrameId = requestAnimationFrame(updateAndDraw); return; }
+
+        ctx.clearRect(0, 0, width, height);
+
+        // 批量设置一次样式
+        ctx.lineWidth = 1.5;
+
+        for (let i = 0; i < RAIN_COUNT; i++) {
+            const base = i * STRIDE;
+
+            // 更新位置
+            raindrops[base + 1] += raindrops[base + 3]; // y += speed
+            if (raindrops[base + 1] > height + 50) {
+                raindrops[base + 1] = -30;
+                raindrops[base + 0] = Math.random() * width;
+            }
+
+            // 绘制（使用预计算值，零内存分配）
+            const x = raindrops[base + 0];
+            const y = raindrops[base + 1];
+            const len = raindrops[base + 2];
+            const shake = SHAKE_TABLE[(shakeIdx + i) & 31];
+
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x + shake, y + len);
+            ctx.strokeStyle = dropColors[i];
+            ctx.stroke();
+        }
+
+        shakeIdx = (shakeIdx + 1) & 31;
+        animFrameId = requestAnimationFrame(updateAndDraw);
+    }
+
+    // resize 时只重置位置，不重建对象
+    window.addEventListener('resize', () => {
+        resizeCanvas();
+        if (raindrops) {
+            for (let i = 0; i < RAIN_COUNT; i++) {
+                raindrops[i * STRIDE] = Math.random() * width;
+            }
+        }
+    });
+
+    // 页面可见性API：标签页隐藏时暂停动画
+    document.addEventListener('visibilitychange', () => {
+        isPaused = document.hidden;
+        if (!isPaused && !animFrameId) {
+            updateAndDraw();
+        }
+    });
+
+    resizeCanvas();
+    initRain();
+    updateAndDraw();
+
+    // ========== 比例控制 ==========
+    let currentRatio = "16:9";
+    let ratioLock = false;
+    const gameFrame = document.getElementById('gameFrame');
+    const playerArea = document.getElementById('playerArea');
+    
+    function applyAspectRatio() {
+        if (!gameFrame || ratioLock) return;
+        ratioLock = true;
+        setTimeout(() => { ratioLock = false; }, 100);
+        let [w, h] = currentRatio.split(':').map(Number);
+        if (isNaN(w) || isNaN(h) || h === 0) { w = 16; h = 9; }
+        if (!playerArea) return;
+        const parentWidth = Math.max(100, playerArea.clientWidth - 40);
+        const parentHeight = Math.max(100, playerArea.clientHeight - 40);
+        const targetHeight = parentWidth / (w / h);
+        let finalWidth, finalHeight;
+        if (targetHeight > parentHeight) {
+            finalWidth = parentHeight * (w / h);
+            finalHeight = parentHeight;
+        } else {
+            finalWidth = parentWidth;
+            finalHeight = targetHeight;
+        }
+        finalWidth = Math.max(100, finalWidth);
+        finalHeight = Math.max(100, finalHeight);
+        gameFrame.style.width = `${finalWidth}px`;
+        gameFrame.style.height = `${finalHeight}px`;
+        // 如果游戏画布已显示，调整其大小
+        const mainCanvas = document.getElementById('main-canvas');
+        if (mainCanvas && mainCanvas.style.display !== 'none') {
+            mainCanvas.width = finalWidth;
+            mainCanvas.height = finalHeight;
+            resizeGameCanvas();
+        }
+    }
+    
+    function setRatio(ratio) {
+        currentRatio = ratio;
+        applyAspectRatio();
+    }
+    window.addEventListener('resize', applyAspectRatio);
+    setTimeout(() => { applyAspectRatio(); }, 500);
+    setTimeout(() => { applyAspectRatio(); }, 1000);
+
+    // ========== 全屏/剧场模式 ==========
+    let isTheaterMode = false;
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+    const appContainer = document.querySelector('.app-container');
+    const navbar = document.querySelector('.navbar');
+    const statusBar = document.querySelector('.status-bar');
+    let hideControlsTimeout = null;
+
+    function toggleTheaterMode() {
+        isTheaterMode = !isTheaterMode;
+        appContainer.classList.toggle('theater-mode', isTheaterMode);
+        fullscreenBtn.innerHTML = isTheaterMode ? '⛶ 退出' : '⛶ 全屏';
+        fullscreenBtn.style.background = isTheaterMode ? 'linear-gradient(135deg, var(--rain-sky), var(--rain-teal))' : '';
+        fullscreenBtn.style.color = isTheaterMode ? 'white' : '';
+
+        if (isTheaterMode) {
+            gameFrame.style.width = '100vw';
+            gameFrame.style.height = '100vh';
+            gameFrame.style.borderRadius = '0';
+            gameFrame.style.position = 'fixed';
+            gameFrame.style.top = '0';
+            gameFrame.style.left = '0';
+            gameFrame.style.zIndex = '10';
+        } else {
+            gameFrame.style.position = 'relative';
+            gameFrame.style.zIndex = '';
+            setTimeout(() => applyAspectRatio(), 100);
+            gameFrame.style.borderRadius = 'var(--radius-lg)';
+            navbar.classList.remove('show');
+            statusBar.classList.remove('show');
+        }
+    }
+
+    function showControls() {
+        if (!isTheaterMode) return;
+        navbar.classList.add('show');
+        statusBar.classList.add('show');
+
+        if (hideControlsTimeout) clearTimeout(hideControlsTimeout);
+        hideControlsTimeout = setTimeout(() => {
+            if (isTheaterMode) {
+                navbar.classList.remove('show');
+                statusBar.classList.remove('show');
+            }
+        }, 3000);
+    }
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isTheaterMode) return;
+        if (e.clientY < 80 || e.clientY > window.innerHeight - 80) showControls();
+    });
+    fullscreenBtn.addEventListener('click', toggleTheaterMode);
+    
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'F11') { e.preventDefault(); toggleTheaterMode(); }
+        if (e.key === 'Escape' && isTheaterMode) toggleTheaterMode();
+    });
+    
+    // 监听全屏变化事件，同步剧场模式状态
+    document.addEventListener('fullscreenchange', () => {
+        const isFullscreen = !!document.fullscreenElement;
+        if (isFullscreen !== isTheaterMode) {
+            // 状态不同步，更新
+            isTheaterMode = isFullscreen;
+            appContainer.classList.toggle('theater-mode', isTheaterMode);
+            fullscreenBtn.innerHTML = isTheaterMode ? '⛶ 退出' : '⛶ 全屏';
+            fullscreenBtn.style.background = isTheaterMode ? 'linear-gradient(135deg, var(--rain-sky), var(--rain-teal))' : '';
+            fullscreenBtn.style.color = isTheaterMode ? 'white' : '';
+            
+            if (isTheaterMode) {
+                gameFrame.style.width = '100vw';
+                gameFrame.style.height = '100vh';
+                gameFrame.style.borderRadius = '0';
+                gameFrame.style.position = 'fixed';
+                gameFrame.style.top = '0';
+                gameFrame.style.left = '0';
+                gameFrame.style.zIndex = '10';
+
+            } else {
+                gameFrame.style.position = 'relative';
+                gameFrame.style.zIndex = '';
+                setTimeout(() => applyAspectRatio(), 100);
+                gameFrame.style.borderRadius = 'var(--radius-lg)';
+                navbar.classList.remove('show');
+                statusBar.classList.remove('show');
+            }
+        }
+    });
+
+    // ========== 弹窗 ==========
+    const modal = document.getElementById('infoModal');
+    document.getElementById('infoBtn').onclick = () => modal.classList.add('show');
+    document.getElementById('closeModal').onclick = () => modal.classList.remove('show');
+    modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('show'); };
+
+    // ========== 状态管理 ==========
+    const state = {
+        chartFile: null,
+        audioFile: null,
+        illuFile: null,
+        isZipMode: false,
+        zipFiles: null,
+        zipType: null,
+        isEngineReady: false,
+        playerInstance: null,
+        storyboardAssets: new Map(),
+        currentLevel: null,
+        chartInfo: null,  // 主JSON中的谱面信息（name, music_artist, charter, difficulty_name, difficulty等）
+        completionStats: null, // 结算数据存储
+        autoResultShown: false // 是否已自动显示结算面板
+    };
+    // 暴露到全局，便于调试和跨函数访问
+    window.state = state;
+
+    // ========== DOM 元素 ==========
+    const els = {
+        loading: document.getElementById('game-loading-overlay'),
+        infoModal: document.getElementById('infoModal'),
+
+        levelModal: document.getElementById('level-select-modal'),
+        levelList: document.getElementById('level-list'),
+        canvas: document.getElementById('main-canvas'),
+        fileInput: document.getElementById('file-input'),
+        fileName: document.getElementById('fileName'),
+        status: document.getElementById('statusMsg'),
+        checkAutoplay: document.getElementById('check-autoplay'),
+        playBtn: document.getElementById('playBtn'),
+        reloadBtn: document.getElementById('reloadBtn'),
+        fullscreenBtn: fullscreenBtn,
+        stopBtn: document.getElementById('stopBtn'),
+
+        initialPrompt: document.getElementById('initialPrompt'),
+        
+        // 结算面板元素
+        resultModal: document.getElementById('resultModal'),
+        resultCloseBtn: document.getElementById('resultCloseBtn'),
+        resultRetryBtn: document.getElementById('resultRetryBtn'),
+        resultScoreVal: document.getElementById('resultScoreVal'),
+        resultAccVal: document.getElementById('resultAccVal'),
+        resultGradeVal: document.getElementById('resultGradeVal'),
+        resultBonus: document.getElementById('resultBonus'),
+        resultStatusVal: document.getElementById('resultStatusVal'),
+        songCover: document.getElementById('resultSongCover'),
+        songTitle: document.getElementById('resultSongTitle'),
+        songArtist: document.getElementById('resultSongArtist'),
+        songDifficulty: document.getElementById('resultSongDifficulty'),
+        songCharter: document.getElementById('resultSongCharter'),
+        detailPerfectLarge: document.getElementById('detailPerfectLarge'),
+        detailPerfectAll: document.getElementById('detailPerfectAll'),
+        detailGood: document.getElementById('detailGood'),
+        detailGoodAll: document.getElementById('detailGoodAll'),
+        detailBad: document.getElementById('detailBad'),
+        detailMiss: document.getElementById('detailMiss')
+    };
+
+    // 为难度选择弹窗添加背景点击关闭功能
+    els.levelModal.addEventListener('click', (e) => {
+        if (e.target === els.levelModal) {
+            els.levelModal.style.display = 'none';
+        }
+    });
+
+    // ========== 初始化引擎 ==========
+    (async () => {
+        try {
+            // 加载字体
+            const font = new FontFace("milFont", "url(./resources/milres/milfont.ttf)");
+            document.fonts.add(await font.load());
+
+            // 加载引擎模块
+            const h5bind = await import("./src/h5bind.js?v=" + Date.now());
+            window.MilLunePlayer = h5bind.default.MilLunePlayer;
+            
+            state.isEngineReady = true;
+            els.status.textContent = "💧 引擎就绪，请选择谱面文件";
+        } catch (e) {
+
+            els.status.textContent = "❌ 引擎加载失败";
+        }
+    })();
+
+    // ========== 文件处理逻辑 ==========
+    
+    // 更新按钮文本
+    function updateFileBtn(text) {
+        els.fileName.textContent = text;
+    }
+
+    // 预加载ZIP中的所有图片资源
+    async function preloadZipImages(zip) {
+        state.storyboardAssets.clear();
+        const imageExts = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'];
+        const imageFiles = [];
+        
+        // 收集所有图片文件
+        zip.forEach((relativePath, file) => {
+            if (!file.dir) {
+                const ext = relativePath.slice(relativePath.lastIndexOf('.')).toLowerCase();
+                if (imageExts.includes(ext)) {
+                    imageFiles.push({ path: relativePath, file: file });
+                }
+            }
+        });
+
+        // 并行加载所有图片
+        const loadPromises = imageFiles.map(async ({ path, file }) => {
+            try {
+                const blob = await file.async('blob');
+                const url = URL.createObjectURL(blob);
+                const img = new Image();
+                
+                await new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = reject;
+                    img.src = url;
+                });
+
+                // 存储不带路径的文件名作为key
+                const fileName = path.split('/').pop();
+                state.storyboardAssets.set(fileName.toLowerCase(), img);
+                
+                // 同时存储带路径的版本
+                state.storyboardAssets.set(path.toLowerCase(), img);
+                
+                return true;
+            } catch (e) {
+
+                return false;
+            }
+        });
+
+        await Promise.all(loadPromises);
+
+    }
+
+    // 故事板资源加载器
+    function storyboardTextureLoader(name) {
+        // 清理名称
+        const cleanName = name.trim();
+        
+        // 1. 直接查找
+        let img = state.storyboardAssets.get(cleanName.toLowerCase());
+        if (img) return img;
+        
+        // 2. 如果name有后缀名，直接搜索
+        const hasExt = /\.(png|jpg|jpeg|gif|webp|bmp)$/i.test(cleanName);
+        if (hasExt) {
+            // 尝试各种路径组合
+            const variations = [
+                cleanName.toLowerCase(),
+                cleanName.split('/').pop().toLowerCase(),
+                '/' + cleanName.toLowerCase(),
+                cleanName.replace(/^\//, '').toLowerCase()
+            ];
+            
+            for (const v of variations) {
+                img = state.storyboardAssets.get(v);
+                if (img) return img;
+            }
+        } else {
+            // 3. 没有后缀名，尝试添加常见后缀搜索
+            const exts = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
+            for (const ext of exts) {
+                const nameWithExt = cleanName + ext;
+                img = state.storyboardAssets.get(nameWithExt.toLowerCase());
+                if (img) return img;
+                
+                // 也尝试带斜杠的版本
+                img = state.storyboardAssets.get(('/' + nameWithExt).toLowerCase());
+                if (img) return img;
+            }
+        }
+        
+        // 4. 对于info.json模式，检查storyboard_assets映射
+        if (state.zipType === 'info' && state.currentLevel && state.currentLevel.FileMap) {
+            const sbAssets = state.currentLevel.FileMap.storyboard_assets || {};
+            if (sbAssets[cleanName]) {
+                const mappedPath = sbAssets[cleanName];
+                img = state.storyboardAssets.get(mappedPath.toLowerCase());
+                if (img) return img;
+            }
+        }
+        
+        // 没找到，返回null
+
+        return null;
+    }
+
+    // 显示Level选择弹窗
+    function showLevelSelect(levels) {
+        return new Promise((resolve) => {
+            els.levelList.innerHTML = '';
+            
+            levels.forEach((level, index) => {
+                const item = document.createElement('div');
+                item.className = 'level-item';
+                item.style.cssText = 'padding: 1rem; margin: 0.5rem 0; background: #f5f7fa; border-radius: 0.5rem; cursor: pointer;';
+                
+                const diff = level.Difficulty || 'Unknown';
+                const mapper = level.Beatmapper || 'Unknown';
+                const diffValue = level.DifficultyValue || 0;
+                
+                item.innerHTML = `
+                    <div style="font-weight: bold; color: #2c3e50;">${diff} ${diffValue > 0 ? diffValue.toFixed(1) : ''}</div>
+                    <div style="font-size: 0.9rem; color: #7f8c8d;">谱师: ${mapper}</div>
+                `;
+                
+                item.addEventListener('click', () => {
+                    els.levelModal.style.display = 'none';
+                    resolve(level);
+                });
+                
+                els.levelList.appendChild(item);
+            });
+            
+            els.levelModal.style.display = 'flex';
+        });
+    }
+
+    // 解析 ZIP
+    async function handleZip(file) {
+        try {
+            const zip = await JSZip.loadAsync(file);
+            state.zipFiles = zip;
+            
+            // 预加载所有图片资源
+            await preloadZipImages(zip);
+            
+            // 检查是否有 meta.json
+            const metaFile = zip.file("meta.json");
+            if (metaFile) {
+                // meta.json 模式
+                const metaContent = await metaFile.async("string");
+                const meta = JSON.parse(metaContent);
+
+                if (!meta.chart_file) {
+                    throw new Error("meta.json 中缺少 chart_file 字段");
+                }
+
+                const getZipFile = (filename) => {
+                    if (!filename) return null;
+                    while (filename.length && filename[0] === ".") filename = filename.slice(1);
+                    let f = zip.file(filename);
+                    if (!f && filename.startsWith('/')) f = zip.file(filename.slice(1));
+                    if (!f && !filename.startsWith('/')) f = zip.file('/' + filename);
+                    return f;
+                };
+
+                const chartBlob = await getZipFile(meta.chart_file).async("blob");
+                // 读取主JSON的谱面信息
+                const chartText = await getZipFile(meta.chart_file).async("string");
+                const chartJson = JSON.parse(chartText);
+                // 谱面信息在 meta 对象中，如果存在则使用，否则回退到整个 JSON
+                state.chartInfo = chartJson.meta || chartJson;
+                // 计算总物量（可击打音符数量）
+                let totalNotes = 0;
+                if (Array.isArray(chartJson)) {
+                    totalNotes = chartJson.filter(item => item && item.type === 0).length;
+                } else if (chartJson.events && Array.isArray(chartJson.events)) {
+                    totalNotes = chartJson.events.filter(item => item && item.type === 0).length;
+                } else {
+                    // 尝试遍历所有顶级属性，查找数组
+                    for (const key in chartJson) {
+                        if (Array.isArray(chartJson[key])) {
+                            const arr = chartJson[key];
+                            // 假设第一个元素有type字段
+                            if (arr.length > 0 && arr[0].type !== undefined) {
+                                totalNotes = arr.filter(item => item && item.type === 0).length;
+                                break;
+                            }
+                        }
+                    }
+                }
+                state.chartInfo.totalNotes = totalNotes;
+
+                const audioBlob = meta.audio_file ? await getZipFile(meta.audio_file).async("blob") : null;
+                const illuBlob = meta.image_file ? await getZipFile(meta.image_file).async("blob") : null;
+
+                state.chartFile = new File([chartBlob], meta.chart_file, {type: "application/json"});
+                state.audioFile = audioBlob ? new File([audioBlob], meta.audio_file, {type: "audio/mpeg"}) : null;
+                state.illuFile = illuBlob ? new File([illuBlob], meta.image_file, {type: "image/png"}) : null;
+                state.zipType = 'meta';
+                state.currentLevel = null;
+
+                updateFileBtn(`📦 ZIP(meta): ${file.name}`);
+                els.status.textContent = "ZIP 解析成功 (meta.json)";
+                checkReady();
+                return;
+            }
+
+            // 检查是否有 info.json
+            const infoFile = zip.file("info.json");
+            if (infoFile) {
+                // info.json 模式
+                const infoContent = await infoFile.async("string");
+                const info = JSON.parse(infoContent);
+
+                if (!info.Levels || info.Levels.length === 0) {
+                    throw new Error("info.json 中没有 Levels");
+                }
+
+                state.zipType = 'info';
+                
+                // 显示Level选择
+                const selectedLevel = await showLevelSelect(info.Levels);
+                state.currentLevel = selectedLevel;
+
+                // 使用选中的Level
+                const fileMap = selectedLevel.FileMap;
+                
+                // 获取文件
+                const getFileFromMap = (path) => {
+                    if (!path) return null;
+                    // 移除开头的斜杠
+                    const cleanPath = path.replace(/^\//, '');
+                    return zip.file(cleanPath) || zip.file(path);
+                };
+
+                const chartZipFile = getFileFromMap(fileMap.beatmap);
+                const audioZipFile = fileMap.song && fileMap.song.length > 0 ? 
+                    getFileFromMap(fileMap.song[0].file) : null;
+                const illuZipFile = getFileFromMap(fileMap.illu);
+
+                if (!chartZipFile) {
+                    throw new Error("找不到谱面文件: " + fileMap.beatmap);
+                }
+
+                const chartBlob = await chartZipFile.async("blob");
+                const audioBlob = audioZipFile ? await audioZipFile.async("blob") : null;
+                const illuBlob = illuZipFile ? await illuZipFile.async("blob") : null;
+
+                state.chartFile = new File([chartBlob], "beatmap.json", {type: "application/json"});
+                state.audioFile = audioBlob ? new File([audioBlob], "song.ogg", {type: "audio/ogg"}) : null;
+                state.illuFile = illuBlob ? new File([illuBlob], "illu.png", {type: "image/png"}) : null;
+
+                updateFileBtn(`📦 ZIP(info): ${file.name} [${selectedLevel.Difficulty}]`);
+                els.status.textContent = `已选择: ${selectedLevel.Difficulty}`;
+                checkReady();
+                return;
+            }
+
+            throw new Error("ZIP中既没有 meta.json 也没有 info.json");
+
+        } catch (err) {
+            els.status.textContent = "ZIP 错误: " + err.message;
+            resetFiles();
+        }
+    }
+
+    function resetFiles() {
+        state.chartFile = null;
+        state.audioFile = null;
+        state.illuFile = null;
+        state.isZipMode = false;
+        state.zipType = null;
+        state.zipFiles = null;
+        state.currentLevel = null;
+        state.storyboardAssets.clear();
+        els.fileInput.value = '';
+        updateFileBtn("未选择文件");
+    }
+
+    // 事件监听
+    els.fileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (file.name.endsWith('.zip')) {
+            await handleZip(file);
+        } else {
+            state.chartFile = file;
+            state.isZipMode = false;
+            state.zipType = null;
+            state.storyboardAssets.clear();
+            updateFileBtn(`📄 ${file.name}`);
+            checkReady();
+        }
+    });
+
+    function checkReady() {
+        const ready = state.isEngineReady && state.chartFile;
+        els.playBtn.disabled = !ready;
+        if(ready) els.status.textContent = "✅ 文件已加载，点击播放开始游戏";
+    }
+
+    // ========== 游戏控制逻辑 ==========
+
+    async function startGame() {
+        if (!state.chartFile) return;
+
+        // 显示加载遮罩
+        els.loading.style.display = 'flex';
+        
+        // 重置自动结算标志
+        state.autoResultShown = false;
+        
+        // 给UI时间渲染遮罩
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        try {
+            // 停止旧实例
+            if (state.playerInstance) {
+                if (typeof state.playerInstance.stop === 'function') {
+                    state.playerInstance.stop();
+                }
+                if (state.playerInstance.destroy) {
+                    state.playerInstance.destroy();
+                }
+                state.playerInstance = null;
+            }
+
+            // 隐藏初始提示，显示画布
+            els.initialPrompt.style.display = 'none';
+            els.canvas.style.display = 'block';
+
+            
+            // 调整画布大小以匹配gameFrame
+            resizeGameCanvas();
+            window.addEventListener('resize', resizeGameCanvas);
+
+            // 创建 URL
+            const chartUrl = URL.createObjectURL(state.chartFile);
+            const audioUrl = state.audioFile ? URL.createObjectURL(state.audioFile) : null;
+            const illuUrl = state.illuFile ? URL.createObjectURL(state.illuFile) : null;
+
+            state.playerInstance = new window.MilLunePlayer({
+                buildDirectory: "./build/",
+                resourcePackPath: "./resources/milres/default.mrp",
+                canvas: els.canvas,
+                chartPath: chartUrl,
+                audioPath: audioUrl,
+                illuPath: illuUrl,
+                fontFam: "milFont",
+                pauseBtnPath: "./resources/milres/buttons/light/pause.png",
+                storyboardTextureLoader: storyboardTextureLoader,
+                isAutoplay: els.checkAutoplay.checked
+            });
+
+            await state.playerInstance.init();
+            
+            // 监听结算数据事件
+
+            state.playerInstance._canvas.addEventListener('completionStats', (event) => {
+
+                // 存储统计数据
+                state.completionStats = event.detail;
+                // 同时存储到实例属性，确保 quitGame 可以访问
+                state.playerInstance._completionStats = event.detail;
+                // 自动显示结算面板（游戏自然结束后的自动结算）
+
+                showResultModal(event.detail);
+                // 标记已自动结算，避免 quitGame 重复显示
+                state.autoResultShown = true;
+            });
+            
+            // 隐藏加载遮罩
+            els.loading.style.display = 'none';
+
+            // 不再自动请求全屏，由用户手动控制
+            // if (document.body.requestFullscreen) {
+            //     document.body.requestFullscreen().catch(e => console.log("Fullscreen denied"));
+            // }
+
+            state.playerInstance.start();
+
+            const renderLoop = () => {
+                if (state.playerInstance) {
+                    state.playerInstance.render();
+                    requestAnimationFrame(renderLoop);
+                }
+            };
+            renderLoop();
+
+        } catch (err) {
+
+            els.loading.style.display = 'none';
+            alert("启动失败: " + err.message);
+            quitGame();
+        }
+    }
+
+    function resizeGameCanvas() {
+        const rect = gameFrame.getBoundingClientRect();
+        els.canvas.width = rect.width;
+        els.canvas.height = rect.height;
+    }
+
+    function quitGame() {
+        // 收集结算数据 - 多级回退策略
+        let completionStats = null;
+
+        
+        // 1. 如果 playerInstance 存在，尝试从中获取
+        if (state.playerInstance) {
+
+
+            completionStats = state.playerInstance._completionStats || state.completionStats;
+        }
+        
+        // 2. 如果仍然没有数据，检查全局存储（从 drawCompletionStatus 设置）
+        if (!completionStats && window.state && window.state.completionStats) {
+
+            completionStats = window.state.completionStats;
+        }
+        
+        // 3. 检查全局调试变量
+        if (!completionStats && window.lastCompletionStatusArgs) {
+
+            // 转换参数为 stats 对象
+            completionStats = {
+                grd_progress: window.lastCompletionStatusArgs.grd_progress,
+                grd_reds: window.lastCompletionStatusArgs.grd_reds,
+                grd_greens: window.lastCompletionStatusArgs.grd_greens,
+                grd_blues: window.lastCompletionStatusArgs.grd_blues,
+                grd_step_count: window.lastCompletionStatusArgs.grd_step_count,
+                scale: window.lastCompletionStatusArgs.scale
+            };
+        }
+        
+        // 4. 如果仍然没有数据，记录警告
+        if (!completionStats) {
+
+        }
+        
+        // 停止播放器
+        if (state.playerInstance) {
+            if (typeof state.playerInstance.stop === 'function') {
+                state.playerInstance.stop();
+            }
+            if (state.playerInstance.destroy) {
+                state.playerInstance.destroy();
+            }
+            state.playerInstance = null;
+        }
+        
+        // 显示结算面板，传递真实数据（如果有）
+        // 如果已经自动显示，则跳过避免重复
+        if (!state.autoResultShown) {
+            showResultModal(completionStats);
+        } else {
+
+        }
+        
+        // 清理资源URL
+        // (简单处理：如果重新选择文件会自动覆盖，这里不逐个追踪 revoke)
+
+        // 关闭所有弹窗
+        els.levelModal.style.display = 'none';
+        els.infoModal.classList.remove('show');
+        
+        els.canvas.style.display = 'none';
+
+        els.loading.style.display = 'none';
+        els.initialPrompt.style.display = 'block';
+        window.removeEventListener('resize', resizeGameCanvas);
+        
+        if (document.fullscreenElement) {
+            document.exitFullscreen();
+        }
+    }
+
+    // 生成紫色雨滴背景
+    function generateRainDrops() {
+        const container = document.getElementById('rainDrops');
+        if (!container) return;
+        container.innerHTML = '';
+        const count = 60;
+        for (let i = 0; i < count; i++) {
+            const drop = document.createElement('div');
+            drop.className = 'rain-drop';
+            const left = Math.random() * 100;
+            const height = Math.random() * 18 + 8;
+            const duration = Math.random() * 1.5 + 0.8;
+            const delay = Math.random() * 3;
+            const opacity = Math.random() * 0.35 + 0.15;
+            // 随机紫色色调
+            const hue = Math.random() * 40 + 250; // 250-290 紫色范围
+            const lightness = Math.random() * 20 + 55;
+            drop.style.cssText = `
+                left: ${left}%;
+                height: ${height}px;
+                --duration: ${duration}s;
+                --delay: ${delay}s;
+                --opacity: ${opacity};
+                background: linear-gradient(180deg, transparent, hsla(${hue}, 70%, ${lightness}%, ${opacity + 0.1}));
+            `;
+            container.appendChild(drop);
+        }
+    }
+
+    // 显示结算面板并更新分数数据
+    function showResultModal(stats = null) {
+
+
+        if (stats) {
+
+        }
+        
+        // ========== 检测 raw 字符串模式（AutoPlay / CRASH 等）==========
+        let isAutoplay = false;
+        let rawStatus = null;  // 记录 raw 字段值
+        if (stats && typeof stats === 'object' && stats.raw) {
+            rawStatus = stats.raw;
+            if (stats.raw === 'AutoPlay is Awesome') {
+                isAutoplay = true;
+            } else {
+
+            }
+        }
+        
+        // ========== 分数数据 - 优先使用真实数据 ==========
+        let score, perfectLarge, perfectSmall, good, bad, miss;
+        if (rawStatus === 'CRASH') {
+            // CRASH：游戏中途失败，默认分数为0
+            score = 0;
+            
+            // 优先使用 stats.judgeCounts（如果 h5bind.js 提供了）
+            if (stats && stats.judgeCounts) {
+                perfectLarge = stats.judgeCounts.perfectLarge || 0;
+                perfectSmall = stats.judgeCounts.perfectSmall || 0;
+                good = stats.judgeCounts.good || 0;
+                bad = stats.judgeCounts.bad || 0;
+                miss = stats.judgeCounts.miss || 0;
+
+            } else if (stats && typeof stats === 'object') {
+                // 其次使用 reds_count/greens_count/blues_count
+                const reds = stats.reds_count || 0;
+                const greens = stats.greens_count || 0;
+                const blues = stats.blues_count || 0;
+                // 假设 Perfect 中 70% 为大P，30% 为小P
+                perfectLarge = Math.floor(reds * 0.7);
+                perfectSmall = reds - perfectLarge;
+                good = greens;
+                bad = 0;
+                miss = blues;
+
+            } else {
+                perfectLarge = 0;
+                perfectSmall = 0;
+                good = 0;
+                bad = 0;
+                miss = 0;
+            }
+        } else if (stats && typeof stats === 'object') {
+            // 分数：优先使用从 drawText 截获的真实分数
+            score = stats.score || 0;
+            
+            // 从 texts 中提取更多信息
+            const texts = stats.texts || [];
+            // 提取准确率（格式如 "97.11%"）
+            let accuracyFromText = null;
+            for (const text of texts) {
+                const accMatch = text.match(/^(\d+\.?\d*)%$/);
+                if (accMatch) {
+                    accuracyFromText = parseFloat(accMatch[1]);
+                }
+            }
+            // 提取最大连击（紧跟 "COMBO" 前面的纯数字）
+            let maxCombo = 0;
+            for (let i = 0; i < texts.length - 1; i++) {
+                if (texts[i + 1] === 'COMBO' && /^\d+$/.test(texts[i])) {
+                    maxCombo = parseInt(texts[i]);
+                }
+            }
+            
+            // 判定详情：使用从 score/accuracy/maxCombo 反推的数据
+            if (stats.judgeCounts) {
+                perfectLarge = stats.judgeCounts.perfectLarge || 0;
+                perfectSmall = stats.judgeCounts.perfectSmall || 0;
+                good = stats.judgeCounts.good || 0;
+                bad = stats.judgeCounts.bad || 0;
+                miss = stats.judgeCounts.miss || 0;
+
+            } else {
+                perfectLarge = 0;
+                perfectSmall = 0;
+                good = 0;
+                bad = 0;
+                miss = 0;
+            }
+            
+            // 如果有从 texts 提取的准确率，用于后续显示
+            if (accuracyFromText !== null) {
+                stats._accuracyFromText = accuracyFromText;
+            }
+            if (maxCombo > 0) {
+                stats._maxCombo = maxCombo;
+            }
+            
+            // 调试
+            if (score === 0) {
+
+            }
+        } else {
+            // 回退到模拟数据
+
+            score = Math.floor(Math.random() * 200000) + 800000; // 800000-1000000
+            perfectLarge = Math.floor(Math.random() * 50) + 50;
+            perfectSmall = Math.floor(Math.random() * 30);
+            good = Math.floor(Math.random() * 20);
+            bad = Math.floor(Math.random() * 5);
+            miss = Math.floor(Math.random() * 3);
+        }
+
+        const perfectTotal = perfectLarge + perfectSmall;
+        const totalNotesFromChart = state.chartInfo?.totalNotes || 0;
+        const totalNotes = totalNotesFromChart > 0 ? totalNotesFromChart : perfectTotal + good + bad + miss;
+
+        // ========== 准确度计算 ==========
+        const accContrib = perfectTotal * 1 + good * 0.5 + bad * 0.1 + miss * 0;
+        const accuracy = totalNotes > 0 ? (accContrib / totalNotes) * 100 : 0;
+
+        // ========== 评级 ==========
+        let grade = 'F';
+        let status = 'Crash';
+        let statusClass = 'status-crash';
+        
+        if (rawStatus === 'CRASH') {
+            // CRASH：游戏中途失败
+            grade = 'CRASH';
+            status = 'Crash';
+            statusClass = 'status-crash';
+
+        } else if (rawStatus === 'AutoPlay is Awesome') {
+            isAutoplay = true;
+        }
+
+        if (rawStatus !== 'CRASH' && stats && typeof stats === 'object' && score > 0) {
+            // ========== 新版评级规则（根据官方规则） ==========
+            // 优先级从高到低：R > 紫S > 青S > 字母评级
+            
+            // 首先确定完成状态（status）
+            if (rawStatus === 'AutoPlay is Awesome') {
+                isAutoplay = true;
+            }
+            
+            // 基于判定数据确定状态
+            if (isAutoplay) {
+                status = 'AutoPlay';
+                statusClass = 'status-autoplay';
+            } else if (rawStatus === 'CRASH') {
+                // 已在前面处理
+            } else {
+                // 根据判定详情确定状态
+                if (good === 0 && bad === 0 && miss === 0) {
+                    // 无 Good/Bad/Miss，全是 Perfect
+                    if (perfectSmall === 0) {
+                        // 全大P
+                        status = 'Rhythm of Rain';
+                        statusClass = 'status-ror';
+                    } else {
+                        // 至少有一个小P
+                        status = 'All Perfect';
+                        statusClass = 'status-ap';
+                    }
+                } else if (bad === 0 && miss === 0) {
+                    // 无 Bad/Miss，但有 Good
+                    status = 'Full Combo';
+                    statusClass = 'status-fc';
+                } else if (accuracy < 80) {
+                    status = 'Crash';
+                    statusClass = 'status-crash';
+                } else {
+                    status = 'Complete';
+                    statusClass = 'status-complete';
+                }
+            }
+            
+            // 确定评级（grade）
+            if (isAutoplay) {
+                grade = 'AutoPlay';
+            } else if (status === 'Rhythm of Rain' && score >= 1010000) {
+                // R：理论值，全大P且分数 >= 1010000
+                grade = 'R';
+            } else if (status === 'All Perfect' && score >= 1000000 && score <= 1009999) {
+                // 紫S：All Perfect 且分数在 1000000-1009999 之间
+                grade = '紫S';
+            } else if (status === 'Full Combo') {
+                // 青S：Full Combo（无 Bad/Miss）
+                grade = '青S';
+            } else {
+                // 字母评级
+                if      (score >= 950000) { grade = 'S'; }
+                else if (score >= 900000) { grade = 'A'; }
+                else if (score >= 850000) { grade = 'B'; }
+                else if (score >= 800000) { grade = 'C'; }
+                else { grade = 'F'; }
+            }
+            
+            // 特殊情况：分数 >= 1010000 但状态不是 Rhythm of Rain（可能使用了倾盆大雨等）
+            if (score >= 1010000 && status !== 'Rhythm of Rain') {
+                status = 'Overloaded';
+                statusClass = 'status-overloaded';
+            }
+            
+            // 特殊情况：如果准确率 < 80%，状态强制为 Crash（即使 rawStatus 不是 CRASH）
+            if (accuracy < 80 && rawStatus !== 'CRASH') {
+                status = 'Crash';
+                statusClass = 'status-crash';
+            }
+
+
+        }
+
+        // ========== 分数加成（满分/理论值才有） ==========
+        const bonus = score >= 1000000 ? Math.min(100, Math.floor(accuracy - 99)) : 0;
+
+        // ========== 更新歌曲信息（来自主JSON） ==========
+        const ci = state.chartInfo || {};
+        // 兼容 meta 对象嵌套的情况
+        const meta = ci.meta || ci;
+        const songName = meta.name || state.currentLevel?.Title || '未知曲目';
+        const diffName = meta.difficulty_name || state.currentLevel?.Difficulty || '-';
+        const diffNum = meta.difficulty != null ? meta.difficulty : '';
+        const artist = meta.music_artist || '';
+        const charter = meta.charter || '';
+
+        if (els.songTitle) els.songTitle.textContent = songName;
+        if (els.songArtist) els.songArtist.textContent = artist;
+        if (els.songArtist) els.songArtist.style.display = artist ? 'block' : 'none';
+        if (els.songDifficulty) els.songDifficulty.textContent = '难度: ' + diffName + (diffNum !== '' ? ' (' + diffNum + ')' : '');
+        if (els.songCharter) els.songCharter.textContent = charter ? '谱师: ' + charter : '';
+        if (els.songCharter) els.songCharter.style.display = charter ? 'block' : 'none';
+
+        // 更新曲绘
+        if (els.songCover && state.illuFile) {
+            const url = URL.createObjectURL(state.illuFile);
+            els.songCover.src = url;
+        }
+
+        // ========== 更新分数数据 ==========
+        if (els.resultScoreVal) els.resultScoreVal.textContent = score.toLocaleString();
+        // 准确率：优先使用从 texts 截获的真实准确率，否则使用手动计算值
+        const displayAccuracy = stats._accuracyFromText != null ? stats._accuracyFromText : accuracy;
+        // 遇见小数应向下取整：先乘以100取整，再除以100保留两位小数
+        const flooredAccuracy = Math.floor(displayAccuracy * 100) / 100;
+        if (els.resultAccVal) els.resultAccVal.textContent = flooredAccuracy.toFixed(2) + '%';
+
+        // 评级徽章
+        if (els.resultGradeVal) {
+            els.resultGradeVal.textContent = grade;
+            els.resultGradeVal.className = 'result-grade-badge';
+            // 直接用 grade 名称作为 class，特殊字符替换为 -
+            els.resultGradeVal.classList.add('grade-' + grade.replace(/\s+/g, '-'));
+        }
+
+        // 加成
+        if (els.resultBonus) {
+            if (bonus > 0) {
+                els.resultBonus.textContent = '+' + bonus;
+                els.resultBonus.style.display = 'block';
+            } else {
+                els.resultBonus.style.display = 'none';
+            }
+        }
+
+        // 状态
+        if (els.resultStatusVal) {
+            els.resultStatusVal.textContent = status;
+            els.resultStatusVal.className = 'result-status-text ' + statusClass;
+        }
+
+        // 判定详情（当数据不可用时显示占位符）
+        const hasJudgeData = totalNotes > 0;
+        if (els.detailPerfectLarge) els.detailPerfectLarge.textContent = hasJudgeData ? perfectLarge : '—';
+        if (els.detailPerfectAll) els.detailPerfectAll.textContent = hasJudgeData ? perfectTotal : '—';
+        if (els.detailGood) els.detailGood.textContent = hasJudgeData ? good : '—';
+        if (els.detailGoodAll) els.detailGoodAll.textContent = hasJudgeData ? good : '—';
+        if (els.detailBad) els.detailBad.textContent = hasJudgeData ? bad : '—';
+        if (els.detailMiss) els.detailMiss.textContent = hasJudgeData ? miss : '—';
+
+        // 判定条宽度动画（仅在有判定数据时显示）
+        setTimeout(() => {
+            const rows = document.querySelectorAll('.judgment-row');
+            if (!hasJudgeData) {
+                // 无判定数据：隐藏判定条
+                rows.forEach(row => {
+                    const bar = row.querySelector('.judgment-bar');
+                    if (bar) bar.style.setProperty('--fill-w', '0%');
+                });
+                return;
+            }
+            const maxNotes = Math.max(totalNotes, 1);
+            const widths = [
+                (perfectTotal / maxNotes) * 100,
+                (good / maxNotes) * 100,
+                ((bad + miss) / maxNotes) * 100
+            ];
+            rows.forEach((row, i) => {
+                const bar = row.querySelector('.judgment-bar');
+                if (bar) bar.style.setProperty('--fill-w', widths[i] + '%');
+            });
+        }, 60);
+
+        // 生成紫色雨滴
+        generateRainDrops();
+
+
+
+        // 显示结算面板
+        els.resultModal.classList.add('show');
+    }
+
+    // 关闭结算面板
+    function closeResultModal() {
+        els.resultModal.classList.remove('show');
+        // 重置判定条
+        document.querySelectorAll('.judgment-bar').forEach(bar => {
+            bar.style.setProperty('--fill-w', '0%');
+        });
+        // 清理雨滴
+        const drops = document.getElementById('rainDrops');
+        if (drops) drops.innerHTML = '';
+    }
+
+    // 按钮绑定
+    els.playBtn.addEventListener('click', startGame);
+    
+    els.reloadBtn.addEventListener('click', () => {
+        // 重新开始即重新实例化，会先调用stop()
+        startGame();
+    });
+
+    els.stopBtn.addEventListener('click', quitGame);
+
+    // 结算面板按钮绑定
+    if (els.resultCloseBtn) {
+        els.resultCloseBtn.addEventListener('click', closeResultModal);
+    }
+    if (els.resultRetryBtn) {
+        els.resultRetryBtn.addEventListener('click', () => {
+            closeResultModal();
+            startGame();
+        });
+    }
+
+
+    // 比例控制事件
+    document.getElementById('presetRatio').addEventListener('change', (e) => setRatio(e.target.value));
+    document.getElementById('applyRatio').addEventListener('click', () => {
+        let w = document.getElementById('customW').value.trim();
+        let h = document.getElementById('customH').value.trim();
+        if (w && h && !isNaN(w) && !isNaN(h) && Number(h) > 0) setRatio(`${w}:${h}`);
+    });
+
+
+})();
+</script>
+
+</body>
+</html>

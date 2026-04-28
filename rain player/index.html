@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>雨之韵律 · Milthm 谱面播放器</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+<div class="static-bg"></div>
+<div class="bg-overlay"></div>
+<canvas id="rain-canvas"></canvas>
+
+<div class="app-container">
+    <!-- 导航栏 -->
+    <div class="navbar">
+        <div class="logo">
+            <span class="logo-icon">🌧️</span>
+            <span class="logo-text">Rain Player</span>
+        </div>
+        <div class="controls">
+            <label class="upload-btn">
+                📁 选择谱面
+                <input type="file" id="file-input" accept=".zip">
+            </label>
+            <span id="fileName" class="file-info">未选择文件</span>
+
+            <div class="ratio-control">
+                <label>📐 比例</label>
+                <select id="presetRatio" class="ratio-select">
+                    <option value="16:9">16:9</option>
+                    <option value="4:3">4:3</option>
+                    <option value="1:1">1:1</option>
+                    <option value="21:9">21:9</option>
+                </select>
+            </div>
+            <div class="custom-ratio-input">
+                <input type="text" id="customW" placeholder="宽" value="16">
+                <span style="color:var(--rain-teal);font-weight:600;">:</span>
+                <input type="text" id="customH" placeholder="高" value="9">
+                <button id="applyRatio">应用</button>
+            </div>
+
+            <div class="action-buttons">
+                <button id="playBtn" class="action-btn play">▶️ 播放</button>
+                <button id="reloadBtn" class="action-btn reset">🔄 重置</button>
+                <button id="fullscreenBtn" class="action-btn fullscreen" title="全屏/退出 (F11)">⛶ 全屏</button>
+                <button id="settingsBtn" class="settings-btn">⚙️ 设置</button>
+            </div>
+
+            <button id="infoBtn" class="info-link">📋 格式说明</button>
+        </div>
+    </div>
+
+    <!-- 播放区域 -->
+    <div class="player-area" id="playerArea">
+        <div id="gameFrame" class="game-frame" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+            <div style="text-align: center; color: rgba(44,62,80,0.45);padding: 2rem;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">🎵</div>
+                <p style="font-size: 1.05rem;font-weight:500;color:#2c3e50;">选择 Milthm 谱面文件开始游玩</p>
+                <p style="font-size: 0.8rem; margin-top: 0.5rem;color:rgba(0,0,0,0.45);">支持 .zip 格式，需包含 meta.json</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 状态栏 -->
+    <div class="status-bar">
+        <span class="status-msg" id="statusMsg">💧 等待选择谱面文件</span>
+        <div class="status-indicator"></div>
+    </div>
+</div>
+
+<!-- 弹窗 -->
+<div id="infoModal" class="modal">
+    <div class="modal-content">
+        <h3>📋 谱面格式要求</h3>
+        <p>Rain Player 需要 <strong>Milthm 标准格式</strong> 的谱面包。</p>
+        <p>ZIP 文件必须包含：</p>
+        <p>• <code>meta.json</code> - 谱面元数据</p>
+        <p>• <code>music.ogg</code> 或 <code>music.mp3</code> - 音频文件</p>
+        <p>• <code>chart/*.json</code> - 谱面数据</p>
+        <p style="margin-top: 1rem;">💡 提示：使用 Milthm 官方编辑器导出谱面</p>
+        <button class="modal-close" id="closeModal">明白了</button>
+    </div>
+</div>
+
+<!-- 设置面板遮罩 -->
+<div id="settingsOverlay" class="settings-overlay"></div>
+
+<!-- 设置面板 -->
+<div id="settingsPanel" class="settings-panel">
+    <div class="settings-panel-header">
+        <h3>🎮 游戏参数设置</h3>
+        <button class="settings-close-btn" id="closeSettingsBtn">×</button>
+    </div>
+    <div class="settings-content">
+        <!-- 音符设置 -->
+        <div class="settings-section">
+            <div class="settings-section-title">🎵 音符设置</div>
+            
+            <div class="setting-item">
+                <span class="setting-label">音符大小</span>
+                <div class="setting-control">
+                    <input type="range" class="setting-slider" id="param_noteSize" min="0.5" max="2" step="0.05" value="1.15">
+                    <span class="setting-value" id="val_noteSize">1.15x</span>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <span class="setting-label">音符速度</span>
+                <div class="setting-control">
+                    <input type="range" class="setting-slider" id="param_noteSpeed" min="0.5" max="3" step="0.1" value="1">
+                    <span class="setting-value" id="val_noteSpeed">1.0x</span>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <span class="setting-label">下落速度</span>
+                <div class="setting-control">
+                    <input type="range" class="setting-slider" id="param_fallSpeed" min="1" max="20" step="0.5" value="10">
+                    <span class="setting-value" id="val_fallSpeed">10</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 判定设置 -->
+        <div class="settings-section">
+            <div class="settings-section-title">⏱️ 判定设置</div>
+            
+            <div class="setting-item">
+                <span class="setting-label">判定时间偏移</span>
+                <div class="setting-control">
+                    <input type="range" class="setting-slider" id="param_judgmentOffset" min="-500" max="500" step="10" value="0">
+                    <span class="setting-value" id="val_judgmentOffset">0ms</span>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <span class="setting-label">完美判定窗口</span>
+                <div class="setting-control">
+                    <input type="range" class="setting-slider" id="param_perfectWindow" min="20" max="150" step="5" value="50">
+                    <span class="setting-value" id="val_perfectWindow">50ms</span>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <span class="setting-label">良好判定窗口</span>
+                <div class="setting-control">
+                    <input type="range" class="setting-slider" id="param_goodWindow" min="50" max="300" step="10" value="100">
+                    <span class="setting-value" id="val_goodWindow">100ms</span>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <span class="setting-label">判定线位置</span>
+                <div class="setting-control">
+                    <input type="range" class="setting-slider" id="param_judgmentLineY" min="0.1" max="0.9" step="0.02" value="0.85">
+                    <span class="setting-value" id="val_judgmentLineY">85%</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 音频设置 -->
+        <div class="settings-section">
+            <div class="settings-section-title">🔊 音频设置</div>
+            
+            <div class="setting-item">
+                <span class="setting-label">主音量</span>
+                <div class="setting-control">
+                    <input type="range" class="setting-slider" id="param_masterVolume" min="0" max="100" step="5" value="80">
+                    <span class="setting-value" id="val_masterVolume">80%</span>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <span class="setting-label">音乐音量</span>
+                <div class="setting-control">
+                    <input type="range" class="setting-slider" id="param_musicVolume" min="0" max="100" step="5" value="100">
+                    <span class="setting-value" id="val_musicVolume">100%</span>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <span class="setting-label">音效音量</span>
+                <div class="setting-control">
+                    <input type="range" class="setting-slider" id="param_sfxVolume" min="0" max="100" step="5" value="100">
+                    <span class="setting-value" id="val_sfxVolume">100%</span>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <span class="setting-label">音频偏移</span>
+                <div class="setting-control">
+                    <input type="range" class="setting-slider" id="param_audioOffset" min="-500" max="500" step="10" value="0">
+                    <span class="setting-value" id="val_audioOffset">0ms</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 视觉效果 -->
+        <div class="settings-section">
+            <div class="settings-section-title">✨ 视觉效果</div>
+            
+            <div class="setting-item">
+                <span class="setting-label">背景模糊</span>
+                <div class="setting-control">
+                    <div class="setting-toggle" id="toggle_bgBlur"></div>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <span class="setting-label">粒子特效</span>
+                <div class="setting-control">
+                    <div class="setting-toggle active" id="toggle_particles"></div>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <span class="setting-label">打击特效</span>
+                <div class="setting-control">
+                    <div class="setting-toggle active" id="toggle_hitEffects"></div>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <span class="setting-label">判定指示器</span>
+                <div class="setting-control">
+                    <div class="setting-toggle active" id="toggle_judgmentIndicator"></div>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <span class="setting-label">判定文字</span>
+                <div class="setting-control">
+                    <div class="setting-toggle active" id="toggle_judgmentText"></div>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <span class="setting-label">连击计数</span>
+                <div class="setting-control">
+                    <div class="setting-toggle active" id="toggle_comboCounter"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 辅助功能 -->
+        <div class="settings-section">
+            <div class="settings-section-title">🎯 辅助功能</div>
+            
+            <div class="setting-item">
+                <span class="setting-label">反向轨道</span>
+                <div class="setting-control">
+                    <div class="setting-toggle" id="toggle_reverseMode"></div>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <span class="setting-label">显示判定线</span>
+                <div class="setting-control">
+                    <div class="setting-toggle active" id="toggle_judgmentLine"></div>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <span class="setting-label">节奏点标记</span>
+                <div class="setting-control">
+                    <div class="setting-toggle active" id="toggle_beatMarkers"></div>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <span class="setting-label">自动播放</span>
+                <div class="setting-control">
+                    <div class="setting-toggle active" id="toggle_autoPlay"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 显示设置 -->
+        <div class="settings-section">
+            <div class="settings-section-title">📊 显示设置</div>
+            
+            <div class="setting-item">
+                <span class="setting-label">轨道间距</span>
+                <div class="setting-control">
+                    <input type="range" class="setting-slider" id="param_laneSpacing" min="50" max="200" step="5" value="100">
+                    <span class="setting-value" id="val_laneSpacing">100%</span>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <span class="setting-label">轨道数量</span>
+                <div class="setting-control">
+                    <input type="range" class="setting-slider" id="param_laneCount" min="2" max="6" step="1" value="4">
+                    <span class="setting-value" id="val_laneCount">4</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="settings-actions">
+        <button class="settings-action-btn reset" id="resetSettingsBtn">🔄 重置默认</button>
+        <button class="settings-action-btn apply" id="applySettingsBtn">✅ 应用</button>
+    </div>
+</div>
+
+<script src="rain_player.js"></script>
+<script>
+    (function() {
+        // ========== 雨滴特效 - 内存优化版 ==========
+        const canvas = document.getElementById('rain-canvas');
+        const ctx = canvas.getContext('2d', { alpha: true });
+
+        // 预计算颜色池（避免每帧创建字符串）
+        const COLOR_POOL = [
+            'rgba(142,197,252,',
+            'rgba(41,168,185,',
+            'rgba(128,178,228,',
+            'rgba(180,215,235,'
+        ];
+        const COLOR_SUFFIX = ')';
+
+        // 预计算的随机偏移（避免draw中调用Math.random）
+        const SHAKE_TABLE = new Float32Array(32);
+        for (let i = 0; i < 32; i++) SHAKE_TABLE[i] = Math.random() * 1.5 - 0.75;
+
+        let width = 0, height = 0;
+        let raindrops = null;          // TypedArray 存储雨滴数据
+        let dropColors = null;         // 预构建的颜色字符串数组
+        let shakeIdx = 0;              // 抖动索引
+        let animFrameId = 0;           // 动画帧ID，用于取消
+        let isPaused = false;          // 页面不可见时暂停
+
+        const RAIN_COUNT = 120;         // 稍微减少数量（视觉差异不大）
+
+        // 使用 Float32Array 存储雨滴属性：[x, y, length, speed, opacity, colorIdx]
+        // 每个雨滴6个float，连续存储，缓存友好
+        const STRIDE = 6;
+
+        function resizeCanvas() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+
+        function initRain() {
+            raindrops = new Float32Array(RAIN_COUNT * STRIDE);
+            dropColors = new Array(RAIN_COUNT);
+
+            for (let i = 0; i < RAIN_COUNT; i++) {
+                const base = i * STRIDE;
+                raindrops[base + 0] = Math.random() * width;                          // x
+                raindrops[base + 1] = Math.random() * height * 1.2 - height * 0.2;     // y
+                raindrops[base + 2] = Math.random() * 20 + 10;                         // length
+                raindrops[base + 3] = Math.random() * 7 + 3;                          // speed
+                const opacity = Math.random() * 0.35 + 0.15;
+                raindrops[base + 4] = opacity;                                         // opacity
+                const cidx = Math.random() < 0.4 ? 0 : Math.random() < 0.5 ? 1 : Math.random() < 0.8 ? 2 : 3;
+                raindrops[base + 5] = cidx;                                           // colorIdx
+                // 预构建完整颜色字符串
+                const extra = (cidx === 3) ? 0.1 : 0;
+                dropColors[i] = COLOR_POOL[cidx] + (opacity + extra).toFixed(3) + COLOR_SUFFIX;
+            }
+        }
+
+        function updateAndDraw() {
+            if (!ctx || isPaused) { animFrameId = requestAnimationFrame(updateAndDraw); return; }
+
+            ctx.clearRect(0, 0, width, height);
+
+            // 批量设置一次样式
+            ctx.lineWidth = 1.5;
+
+            for (let i = 0; i < RAIN_COUNT; i++) {
+                const base = i * STRIDE;
+
+                // 更新位置
+                raindrops[base + 1] += raindrops[base + 3]; // y += speed
+                if (raindrops[base + 1] > height + 50) {
+                    raindrops[base + 1] = -30;
+                    raindrops[base + 0] = Math.random() * width;
+                }
+
+                // 绘制（使用预计算值，零内存分配）
+                const x = raindrops[base + 0];
+                const y = raindrops[base + 1];
+                const len = raindrops[base + 2];
+                const shake = SHAKE_TABLE[(shakeIdx + i) & 31];
+
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x + shake, y + len);
+                ctx.strokeStyle = dropColors[i];
+                ctx.stroke();
+            }
+
+            shakeIdx = (shakeIdx + 1) & 31;
+            animFrameId = requestAnimationFrame(updateAndDraw);
+        }
+
+        // resize 时只重置位置，不重建对象
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            if (raindrops) {
+                for (let i = 0; i < RAIN_COUNT; i++) {
+                    raindrops[i * STRIDE] = Math.random() * width;
+                }
+            }
+        });
+
+        // 页面可见性API：标签页隐藏时暂停动画
+        document.addEventListener('visibilitychange', () => {
+            isPaused = document.hidden;
+            if (!isPaused && !animFrameId) {
+                updateAndDraw();
+            }
+        });
+
+        resizeCanvas();
+        initRain();
+        updateAndDraw();
+
+        // ========== 设置面板 ==========
+        const settingsPanel = document.getElementById('settingsPanel');
+        const settingsOverlay = document.getElementById('settingsOverlay');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+        
+        function openSettings() {
+            settingsPanel.classList.add('open');
+            settingsOverlay.classList.add('show');
+        }
+        
+        function closeSettings() {
+            settingsPanel.classList.remove('open');
+            settingsOverlay.classList.remove('show');
+        }
+        
+        settingsBtn.addEventListener('click', openSettings);
+        closeSettingsBtn.addEventListener('click', closeSettings);
+        settingsOverlay.addEventListener('click', closeSettings);
+        
+        // 参数默认值
+        const defaultSettings = {
+            noteSize: 1.15, noteSpeed: 1, fallSpeed: 10,
+            judgmentOffset: 0, perfectWindow: 50, goodWindow: 100,
+            judgmentLineY: 0.85, masterVolume: 80, musicVolume: 100,
+            sfxVolume: 100, audioOffset: 0, laneSpacing: 100, laneCount: 4
+        };
+        
+        const toggleDefaults = {
+            bgBlur: false, particles: true, hitEffects: true,
+            judgmentIndicator: true, judgmentText: true, comboCounter: true,
+            reverseMode: false, judgmentLine: true, beatMarkers: true, autoPlay: true
+        };
+        
+        // 初始化滑块
+        Object.keys(defaultSettings).forEach(key => {
+            const slider = document.getElementById('param_' + key);
+            const valueDisplay = document.getElementById('val_' + key);
+            if (slider && valueDisplay) {
+                slider.value = defaultSettings[key];
+                updateSliderDisplay(key, defaultSettings[key]);
+                slider.addEventListener('input', () => updateSliderDisplay(key, slider.value));
+            }
+        });
+        
+        // 初始化开关
+        Object.keys(toggleDefaults).forEach(key => {
+            const toggle = document.getElementById('toggle_' + key);
+            if (toggle) {
+                toggle.classList.toggle('active', toggleDefaults[key]);
+                toggle.addEventListener('click', () => {
+                    toggle.classList.toggle('active');
+                });
+            }
+        });
+        
+        function updateSliderDisplay(key, value) {
+            const valueDisplay = document.getElementById('val_' + key);
+            if (!valueDisplay) return;
+            
+            if (key === 'judgmentLineY') {
+                valueDisplay.textContent = Math.round(value * 100) + '%';
+            } else if (key === 'masterVolume' || key === 'musicVolume' || key === 'sfxVolume') {
+                valueDisplay.textContent = value + '%';
+            } else if (key === 'judgmentOffset' || key === 'audioOffset' || key === 'perfectWindow' || key === 'goodWindow') {
+                valueDisplay.textContent = value + 'ms';
+            } else if (key === 'laneSpacing') {
+                valueDisplay.textContent = value + '%';
+            } else if (key === 'laneCount') {
+                valueDisplay.textContent = value;
+            } else {
+                valueDisplay.textContent = value + 'x';
+            }
+        }
+        
+        function getAllSettings() {
+            const settings = {};
+            Object.keys(defaultSettings).forEach(key => {
+                const slider = document.getElementById('param_' + key);
+                if (slider) settings[key] = parseFloat(slider.value);
+            });
+            Object.keys(toggleDefaults).forEach(key => {
+                const toggle = document.getElementById('toggle_' + key);
+                if (toggle) settings[key] = toggle.classList.contains('active');
+            });
+            return settings;
+        }
+        
+        function applySettings() {
+            const settings = getAllSettings();
+            if (rainInstance && rainInstance.iframe && rainInstance.iframe.contentWindow) {
+                try {
+                    rainInstance.iframe.contentWindow.postMessage({ type: 'settings', settings: settings }, '*');
+                    statusSpan.innerHTML = "⚙️ 参数已应用";
+                } catch(e) {}
+            }
+            if (rainInstance && typeof rainInstance.setSettings === 'function') {
+                rainInstance.setSettings(settings);
+            }
+        }
+        
+        function applySetting(key, value) {
+            if (rainInstance && rainInstance.iframe && rainInstance.iframe.contentWindow) {
+                try {
+                    rainInstance.iframe.contentWindow.postMessage({ type: 'setting', key: key, value: value }, '*');
+                } catch(e) {}
+            }
+        }
+        
+        Object.keys(defaultSettings).forEach(key => {
+            const slider = document.getElementById('param_' + key);
+            if (slider) slider.addEventListener('change', () => applySetting(key, parseFloat(slider.value)));
+        });
+        
+        Object.keys(toggleDefaults).forEach(key => {
+            const toggle = document.getElementById('toggle_' + key);
+            if (toggle) toggle.addEventListener('click', () => applySetting(key, toggle.classList.contains('active')));
+        });
+        
+        document.getElementById('resetSettingsBtn').addEventListener('click', () => {
+            Object.keys(defaultSettings).forEach(key => {
+                const slider = document.getElementById('param_' + key);
+                if (slider) { slider.value = defaultSettings[key]; updateSliderDisplay(key, defaultSettings[key]); }
+            });
+            Object.keys(toggleDefaults).forEach(key => {
+                const toggle = document.getElementById('toggle_' + key);
+                if (toggle) toggle.classList.toggle('active', toggleDefaults[key]);
+            });
+        });
+        
+        document.getElementById('applySettingsBtn').addEventListener('click', () => { applySettings(); closeSettings(); });
+
+        // ========== 全屏/剧场模式 ==========
+        let isTheaterMode = false;
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const appContainer = document.querySelector('.app-container');
+        const navbar = document.querySelector('.navbar');
+        const statusBar = document.querySelector('.status-bar');
+        let hideControlsTimeout = null;
+
+        function toggleTheaterMode() {
+            isTheaterMode = !isTheaterMode;
+            appContainer.classList.toggle('theater-mode', isTheaterMode);
+            fullscreenBtn.innerHTML = isTheaterMode ? '⛶ 退出' : '⛶ 全屏';
+            fullscreenBtn.style.background = isTheaterMode ? 'linear-gradient(135deg, var(--rain-sky), var(--rain-teal))' : '';
+            fullscreenBtn.style.color = isTheaterMode ? 'white' : '';
+
+            if (isTheaterMode) {
+                gameFrame.style.width = '100vw'; gameFrame.style.height = '100vh';
+                gameFrame.style.borderRadius = '0'; gameFrame.style.position = 'fixed';
+                gameFrame.style.top = '0'; gameFrame.style.left = '0'; gameFrame.style.zIndex = '10';
+                if (rainInstance && rainInstance.iframe) {
+                    rainInstance.iframe.style.width = '100%'; rainInstance.iframe.style.height = '100%';
+                }
+            } else {
+                gameFrame.style.position = 'relative'; gameFrame.style.zIndex = '';
+                setTimeout(() => applyAspectRatio(), 100); gameFrame.style.borderRadius = 'var(--radius-lg)';
+                navbar.classList.remove('show'); statusBar.classList.remove('show');
+            }
+        }
+
+        function showControls() {
+            if (!isTheaterMode) return;
+            navbar.classList.add('show'); statusBar.classList.add('show');
+            if (hideControlsTimeout) clearTimeout(hideControlsTimeout);
+            hideControlsTimeout = setTimeout(() => {
+                if (isTheaterMode) { navbar.classList.remove('show'); statusBar.classList.remove('show'); }
+            }, 3000);
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isTheaterMode) return;
+            if (e.clientY < 80 || e.clientY > window.innerHeight - 80) showControls();
+        });
+        fullscreenBtn.addEventListener('click', toggleTheaterMode);
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'F11') { e.preventDefault(); toggleTheaterMode(); }
+            if (e.key === 'Escape' && isTheaterMode) toggleTheaterMode();
+            if (e.key === ' ' && rainInstance) {
+                e.preventDefault();
+                if (typeof rainInstance.play === 'function') rainInstance.play();
+            }
+        });
+
+        // ========== RainPlayer 集成 ==========
+        let rainInstance = null;
+        let currentChartBlob = null;
+        let currentChartUrl = null;
+        let gameFrame = document.getElementById('gameFrame');
+        let statusSpan = document.getElementById('statusMsg');
+        let fileNameSpan = document.getElementById('fileName');
+
+        try {
+            RainPlayer.configure({ webglBuildDir: "./webgl_build_dir" });
+            console.log("RainPlayer 配置完成");
+        } catch(e) {
+            console.warn("RainPlayer 配置失败:", e);
+        }
+
+        function cleanupChartUrl() {
+            if (currentChartUrl) { URL.revokeObjectURL(currentChartUrl); currentChartUrl = null; }
+        }
+
+        function destroyPlayer() {
+            if (rainInstance) {
+                if (rainInstance.iframe && rainInstance.iframe.parentNode) { try { rainInstance.iframe.remove(); } catch(e) {} }
+                rainInstance = null;
+            }
+        }
+
+        function autoFullscreenIframe(iframe) {
+            if (!iframe) return;
+            const style = document.createElement('style');
+            style.textContent = `
+                html,body{margin:0!important;padding:0!important;overflow:hidden!important;width:100%!important;height:100%!important;position:relative!important}
+                #unity-container{width:100%!important;height:100%!important;position:relative!important}
+                canvas{max-width:100%!important;max-height:100%!important;display:block!important;position:absolute!important;top:50%!important;left:50%!important;transform:translate(-50%,-50%)!important}
+            `;
+            try { if (iframe.contentDocument) iframe.contentDocument.head.appendChild(style); }
+            catch(e) { console.log("无法注入样式（跨域）"); }
+        }
+
+        async function loadChart(file) {
+            if (!file) return false;
+            if (!file.name.toLowerCase().endsWith('.zip')) {
+                statusSpan.innerHTML = "⚠️ 请选择 .zip 格式的谱面文件";
+                return false;
+            }
+            cleanupChartUrl(); destroyPlayer();
+            currentChartBlob = file; currentChartUrl = URL.createObjectURL(file);
+            fileNameSpan.textContent = file.name;
+            statusSpan.innerHTML = `📁 正在加载: ${file.name}...`;
+
+            while (gameFrame.firstChild) gameFrame.removeChild(gameFrame.firstChild);
+            const loadingDiv = document.createElement('div');
+            loadingDiv.style.cssText = "text-align:center;color:rgba(44,62,80,0.65);padding:2rem;";
+            loadingDiv.innerHTML = '<div style="font-size:2rem;">⏳</div><p>正在加载渲染器...</p><p style="font-size:0.7rem;color:rgba(0,0,0,0.4);">首次加载可能需要几秒钟</p>';
+            gameFrame.appendChild(loadingDiv);
+
+            try {
+                const instance = RainPlayer.instantiate({
+                    chartUrl: currentChartUrl, container: gameFrame, autoPlay: true,
+                    noteSize: 1.15, elIndicator: true,
+                });
+                
+                rainInstance = instance;
+                await instance.waitLoaded();
+                if (typeof instance.play === 'function') instance.play();
+                
+                if (instance.iframe) {
+                    instance.iframe.style.width = "100%";
+                    instance.iframe.style.height = "100%";
+                    instance.iframe.style.border = "none";
+                    instance.iframe.style.borderRadius = "var(--radius-lg)";
+                    instance.iframe.style.position = "relative";
+                    instance.iframe.style.display = "block";
+                    instance.iframe.style.objectFit = "contain";
+
+                    setTimeout(() => { applyAspectRatio(); }, 100);
+                    setTimeout(() => { autoFullscreenIframe(instance.iframe); applyAspectRatio(); }, 500);
+
+                    try {
+                        instance.iframe.contentWindow.addEventListener("rain_player_back_to_hub", () => {
+                            statusSpan.innerHTML = "🏠 已返回大厅";
+                        });
+                    } catch(e) {}
+
+                    instance.iframe.addEventListener('load', () => {
+                        const autoPlayEnabled = document.getElementById('toggle_autoPlay').classList.contains('active');
+                        if (autoPlayEnabled) {
+                            const tryPlay = () => {
+                                try {
+                                    instance.iframe.contentWindow.postMessage({ type: "play", command: "start" }, "*");
+                                    const iframeDoc = instance.iframe.contentDocument || instance.iframe.contentWindow.document;
+                                    const iframeCanvas = iframeDoc ? iframeDoc.querySelector('canvas') : null;
+                                    if (iframeCanvas) { iframeCanvas.focus(); iframeCanvas.click(); }
+                                } catch(e) {}
+                            };
+                            setTimeout(tryPlay, 500); setTimeout(tryPlay, 1500);
+                            setTimeout(tryPlay, 2500); setTimeout(tryPlay, 3500);
+                        }
+                    });
+                }
+                statusSpan.innerHTML = "🎵 正在播放中...";
+                return true;
+            } catch(err) {
+                console.error("加载失败:", err);
+                statusSpan.innerHTML = `❌ 加载失败`;
+
+                let errorTitle = '谱面加载失败';
+                let errorDetail = err.message || "未知错误";
+                if (errorDetail.includes('meta.json')) { errorTitle = '缺少 meta.json 文件'; errorDetail = '请确认谱面包中包含 meta.json 文件，且位于压缩包根目录'; }
+                else if (errorDetail.includes('music') || errorDetail.includes('audio')) { errorTitle = '缺少音频文件'; errorDetail = '请确认谱面包中包含 music.ogg 或 music.mp3 文件'; }
+                else if (errorDetail.includes('chart')) { errorTitle = '谱面文件错误'; errorDetail = '请确认 chart 文件夹中包含谱面数据文件'; }
+                else if (errorDetail.includes('zip') || errorDetail.includes('archive')) { errorTitle = '文件格式错误'; errorDetail = '请选择正确的 Milthm 谱面 ZIP 文件'; }
+
+                while (gameFrame.firstChild) gameFrame.removeChild(gameFrame.firstChild);
+
+                const errorDiv = document.createElement('div');
+                errorDiv.style.cssText = "text-align:center;color:rgba(44,62,80,0.85);padding:2rem;max-width:420px;margin:0 auto;";
+                errorDiv.innerHTML = `
+                    <div style="font-size:4rem;margin-bottom:1rem;">📁</div>
+                    <h3 style="background:linear-gradient(135deg,var(--rain-teal),var(--rain-sky));-webkit-background-clip:text;background-clip:transparent;color:transparent;font-weight:700;margin-bottom:0.5rem;">${errorTitle}</h3>
+                    <p style="font-size:0.85rem;color:rgba(0,0,0,0.6);margin:1rem 0;">${errorDetail}</p>
+                    <div style="background:linear-gradient(135deg,hsl(210,25%,88%),hsl(250,20%,90%));border-radius:0.8rem;padding:1rem;margin-top:1rem;text-align:left;border:1px solid rgba(142,197,252,0.2);">
+                        <p style="font-size:0.75rem;color:rgba(0,0,0,0.5);margin-bottom:0.5rem;">📋 正确格式应包含：</p>
+                        <p style="font-size:0.75rem;color:rgba(0,0,0,0.75);">• meta.json - 谱面元数据</p>
+                        <p style="font-size:0.75rem;color:rgba(0,0,0,0.75);">• music.ogg / music.mp3 - 音频</p>
+                        <p style="font-size:0.75rem;color:rgba(0,0,0,0.75);">• chart/*.json - 谱面数据</p>
+                    </div>
+                `;
+                gameFrame.appendChild(errorDiv);
+                return false;
+            }
+        }
+
+        window.addEventListener('message', (event) => {
+            if (!event.data || typeof event.data !== 'object') return;
+            if (event.data.type === 'error') {
+                const err = event.data;
+                let errorTitle = '谱面加载失败';
+                let errorDetail = err.message || "未知错误";
+                if (err.message && err.message.includes('meta.json')) { errorTitle = '缺少 meta.json 文件'; errorDetail = '请确认谱面包中包含 meta.json 文件，且位于压缩包根目录'; }
+                else if (err.message && (err.message.includes('music') || err.message.includes('audio'))) { errorTitle = '缺少音频文件'; errorDetail = '请确认谱面包中包含 music.ogg 或 music.mp3 文件'; }
+                else if (err.code === 'CHART_ERROR') { errorTitle = '谱面文件错误'; errorDetail = err.message || '谱面格式不正确，请检查文件完整性'; }
+
+                if (rainInstance) {
+                    statusSpan.innerHTML = `❌ ${errorTitle}`;
+                    while (gameFrame.firstChild) gameFrame.removeChild(gameFrame.firstChild);
+                    const errorDiv = document.createElement('div');
+                    errorDiv.style.cssText = "text-align:center;color:rgba(44,62,80,0.85);padding:2rem;max-width:420px;margin:0 auto;";
+                    errorDiv.innerHTML = `
+                        <div style="font-size:4rem;margin-bottom:1rem;">📁</div>
+                        <h3 style="background:linear-gradient(135deg,var(--rain-teal),var(--rain-sky));-webkit-background-clip:text;background-clip:transparent;color:transparent;font-weight:700;margin-bottom:0.5rem;">${errorTitle}</h3>
+                        <p style="font-size:0.85rem;color:rgba(0,0,0,0.6);margin:1rem 0;">${errorDetail}</p>
+                        <div style="background:linear-gradient(135deg,hsl(210,25%,88%),hsl(250,20%,90%));border-radius:0.8rem;padding:1rem;margin-top:1rem;text-align:left;border:1px solid rgba(142,197,252,0.2);">
+                            <p style="font-size:0.75rem;color:rgba(0,0,0,0.5);margin-bottom:0.5rem;">📋 正确格式应包含：</p>
+                            <p style="font-size:0.75rem;color:rgba(0,0,0,0.75);">• meta.json - 谱面元数据</p>
+                            <p style="font-size:0.75rem;color:rgba(0,0,0,0.75);">• music.ogg / music.mp3 - 音频</p>
+                            <p style="font-size:0.75rem;color:rgba(0,0,0,0.75);">• chart/*.json - 谱面数据</p>
+                        </div>
+                    `;
+                    gameFrame.appendChild(errorDiv);
+                }
+            }
+        });
+
+        async function resetPlayer() {
+            if (!currentChartBlob) { statusSpan.innerHTML = "📁 请先选择谱面文件"; return; }
+            statusSpan.innerHTML = "🔄 正在重置...";
+            destroyPlayer(); cleanupChartUrl(); currentChartUrl = URL.createObjectURL(currentChartBlob);
+            while (gameFrame.firstChild) gameFrame.removeChild(gameFrame.firstChild);
+
+            const loadingDiv = document.createElement('div');
+            loadingDiv.style.cssText = "text-align:center;color:rgba(44,62,80,0.65);padding:2rem;";
+            loadingDiv.innerHTML = '<div style="font-size:2rem;">⏳</div><p>正在重新加载...</p>';
+            gameFrame.appendChild(loadingDiv);
+
+            try {
+                const instance = RainPlayer.instantiate({
+                    chartUrl: currentChartUrl, container: gameFrame, autoPlay: true, noteSize: 1.15, elIndicator: true,
+                });
+                rainInstance = instance; await instance.waitLoaded();
+                if (typeof instance.play === 'function') instance.play();
+                if (instance.iframe) {
+                    instance.iframe.style.width = "100%"; instance.iframe.style.height = "100%";
+                    instance.iframe.style.border = "none"; instance.iframe.style.display = "block";
+                    instance.iframe.style.objectFit = "contain";
+                    instance.iframe.addEventListener('load', () => {
+                        const autoPlayEnabled = document.getElementById('toggle_autoPlay').classList.contains('active');
+                        if (autoPlayEnabled) {
+                            const tryPlay = () => {
+                                try { instance.iframe.contentWindow.postMessage({ type: "play", command: "start" }, "*"); const iframeDoc = instance.iframe.contentDocument || instance.iframe.contentWindow.document; const iframeCanvas = iframeDoc ? iframeDoc.querySelector('canvas') : null; if (iframeCanvas) { iframeCanvas.focus(); iframeCanvas.click(); } } catch(e) {}
+                            };
+                            setTimeout(tryPlay, 500); setTimeout(tryPlay, 1500); setTimeout(tryPlay, 2500);
+                        }
+                    });
+                    setTimeout(() => { autoFullscreenIframe(instance.iframe); applyAspectRatio(); }, 500);
+                }
+                statusSpan.innerHTML = "🎵 正在播放中...";
+            } catch(err) { statusSpan.innerHTML = `❌ 重置失败: ${err.message}`; }
+        }
+
+        // ========== 比例控制 ==========
+        let currentRatio = "16:9"; let ratioLock = false;
+        
+        function applyAspectRatio() {
+            if (!gameFrame || ratioLock) return;
+            ratioLock = true; setTimeout(() => { ratioLock = false; }, 100);
+            let [w, h] = currentRatio.split(':').map(Number);
+            if (isNaN(w) || isNaN(h) || h === 0) { w = 16; h = 9; }
+            const parent = document.getElementById('playerArea');
+            if (!parent) return;
+            const parentWidth = Math.max(100, parent.clientWidth - 40);
+            const parentHeight = Math.max(100, parent.clientHeight - 40);
+            const targetHeight = parentWidth / (w / h);
+            let finalWidth, finalHeight;
+            if (targetHeight > parentHeight) { finalWidth = parentHeight * (w / h); finalHeight = parentHeight; }
+            else { finalWidth = parentWidth; finalHeight = targetHeight; }
+            finalWidth = Math.max(100, finalWidth); finalHeight = Math.max(100, finalHeight);
+            gameFrame.style.width = `${finalWidth}px`; gameFrame.style.height = `${finalHeight}px`;
+            if (rainInstance && rainInstance.iframe) { rainInstance.iframe.style.width = "100%"; rainInstance.iframe.style.height = "100%"; }
+        }
+        
+        function setRatio(ratio) { currentRatio = ratio; applyAspectRatio(); }
+        window.addEventListener('resize', () => { applyAspectRatio(); });
+        setTimeout(() => { applyAspectRatio(); }, 500); setTimeout(() => { applyAspectRatio(); }, 1000);
+
+        // ========== 弹窗 ==========
+        const modal = document.getElementById('infoModal');
+        document.getElementById('infoBtn').onclick = () => modal.classList.add('show');
+        document.getElementById('closeModal').onclick = () => modal.classList.remove('show');
+        modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('show'); };
+
+        // ========== 事件绑定 ==========
+        document.getElementById('file-input').addEventListener('change', (e) => { if (e.target.files[0]) loadChart(e.target.files[0]); });
+        document.getElementById('reloadBtn').addEventListener('click', resetPlayer);
+        document.getElementById('playBtn').addEventListener('click', () => {
+            const tryPlayNow = () => {
+                if (rainInstance && rainInstance.iframe && rainInstance.iframe.contentWindow) {
+                    try { rainInstance.iframe.contentWindow.postMessage({ type: 'play', command: 'start' }, '*'); const iframeDoc = rainInstance.iframe.contentDocument || rainInstance.iframe.contentWindow.document; const iframeCanvas = iframeDoc ? iframeDoc.querySelector('canvas') : null; if (iframeCanvas) { iframeCanvas.focus(); iframeCanvas.click(); } } catch(e) {}
+                }
+            };
+            if (rainInstance && typeof rainInstance.play === 'function') rainInstance.play();
+            tryPlayNow(); setTimeout(tryPlayNow, 500); setTimeout(tryPlayNow, 1000);
+        });
+        document.getElementById('presetRatio').addEventListener('change', (e) => setRatio(e.target.value));
+        document.getElementById('applyRatio').addEventListener('click', () => {
+            let w = document.getElementById('customW').value.trim();
+            let h = document.getElementById('customH').value.trim();
+            if (w && h && !isNaN(w) && !isNaN(h) && Number(h) > 0) setRatio(`${w}:${h}`);
+        });
+
+        console.log("Rain Player 已启动 - 选择谱面后自动开始播放");
+    })();
+</script>
+</body>
+</html>
