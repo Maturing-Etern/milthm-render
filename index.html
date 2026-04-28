@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>雨之韵律 · Milthm 渲染版本</title>
+    <link rel="stylesheet" href="./style.css">
+    <style>
+        /* ========== 引导页专用样式 ========== */
+
+        body {
+            background: #0a0e17;
+        }
+
+        /* 深色星空背景 */
+        .gateway-bg {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 20% 80%, rgba(41, 168, 185, 0.08) 0%, transparent 60%),
+                radial-gradient(ellipse 70% 50% at 80% 20%, rgba(142, 197, 252, 0.1) 0%, transparent 60%),
+                linear-gradient(160deg, #0a0e17 0%, #111827 40%, #0f172a 100%);
+        }
+
+        /* 星点 */
+        .stars {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            overflow: hidden;
+        }
+        .star {
+            position: absolute;
+            border-radius: 50%;
+            background: white;
+            animation: twinkle var(--dur) ease-in-out infinite alternate;
+        }
+        @keyframes twinkle {
+            0% { opacity: 0.15; transform: scale(0.8); }
+            100% { opacity: var(--max-o); transform: scale(1.2); }
+        }
+
+        /* 漂浮光球 */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: 2;
+            animation: orbFloat 12s ease-in-out infinite alternate;
+            pointer-events: none;
+        }
+        .orb-1 {
+            width: 400px; height: 400px;
+            background: rgba(142, 197, 252, 0.06);
+            top: -10%; left: -5%;
+            animation-duration: 14s;
+        }
+        .orb-2 {
+            width: 350px; height: 350px;
+            background: rgba(41, 168, 185, 0.07);
+            bottom: -10%; right: -5%;
+            animation-duration: 10s;
+            animation-delay: -3s;
+        }
+        .orb-3 {
+            width: 250px; height: 250px;
+            background: rgba(167, 139, 250, 0.05);
+            top: 40%; left: 50%;
+            transform: translateX(-50%);
+            animation-duration: 16s;
+            animation-delay: -7s;
+        }
+        @keyframes orbFloat {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(30px, -20px) scale(1.15); }
+        }
+
+        /* 主容器 */
+        .gateway-container {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 2rem;
+            gap: 3rem;
+        }
+
+        /* 标题区 */
+        .gateway-header {
+            text-align: center;
+            animation: fadeSlideDown 0.8s ease-out both;
+        }
+        @keyframes fadeSlideDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .gateway-logo {
+            font-size: 3.5rem;
+            margin-bottom: 0.6rem;
+            filter: drop-shadow(0 0 20px rgba(142, 197, 252, 0.5));
+            display: inline-block;
+            animation: logoPulse 3s ease-in-out infinite;
+        }
+        @keyframes logoPulse {
+            0%, 100% { filter: drop-shadow(0 0 20px rgba(142, 197, 252, 0.5)); }
+            50% { filter: drop-shadow(0 0 32px rgba(142, 197, 252, 0.7)); }
+        }
+        .gateway-title {
+            font-family: var(--font-bold), sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.4rem;
+        }
+        .gateway-subtitle {
+            font-size: 0.95rem;
+            color: rgba(142, 197, 252, 0.7);
+            font-weight: 400;
+            letter-spacing: 0.15em;
+        }
+
+        /* 卡片区域 */
+        .gateway-cards {
+            display: flex;
+            gap: 2.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            animation: fadeSlideUp 0.8s 0.2s ease-out both;
+        }
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 单张卡片 */
+        .gw-card {
+            width: 340px;
+            border-radius: var(--radius-xl);
+            background: rgba(255, 255, 255, 0.04);
+            border: 1.5px solid rgba(142, 197, 252, 0.15);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.35s ease;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+        .gw-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            border-color: rgba(142, 197, 252, 0.4);
+            box-shadow:
+                0 20px 60px rgba(0, 0, 0, 0.3),
+                0 0 40px rgba(142, 197, 252, 0.1);
+        }
+
+        /* 卡片封面 */
+        .gw-card-cover {
+            width: 100%;
+            height: 180px;
+            position: relative;
+            overflow: hidden;
+        }
+        .gw-card-cover img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease, filter 0.5s ease;
+            filter: brightness(0.7) saturate(0.9);
+        }
+        .gw-card:hover .gw-card-cover img {
+            transform: scale(1.08);
+            filter: brightness(0.85) saturate(1.1);
+        }
+        .gw-card-cover::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(
+                to bottom,
+                transparent 40%,
+                rgba(10, 14, 23, 0.95) 100%
+            );
+        }
+
+        /* 卡片标签 */
+        .gw-card-badge {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            z-index: 2;
+        }
+        .badge-player {
+            background: linear-gradient(135deg, rgba(142, 197, 252, 0.25), rgba(41, 168, 185, 0.25));
+            border: 1px solid rgba(142, 197, 252, 0.3);
+            color: var(--rain-sky);
+        }
+        .badge-editor {
+            background: linear-gradient(135deg, rgba(167, 139, 250, 0.25), rgba(236, 72, 153, 0.2));
+            border: 1px solid rgba(167, 139, 250, 0.3);
+            color: rgb(167, 139, 250);
+        }
+
+        /* 卡片内容 */
+        .gw-card-body {
+            padding: 1.2rem 1.5rem 1.5rem;
+            position: relative;
+        }
+        .gw-card-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        .gw-card-name {
+            font-family: var(--font-bold), sans-serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 0.35rem;
+        }
+        .gw-card-desc {
+            font-size: 0.82rem;
+            color: rgba(255, 255, 255, 0.5);
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        /* 卡片底部按钮 */
+        .gw-card-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1.2rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.82rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .gw-card-action .arrow {
+            transition: transform 0.3s ease;
+        }
+        .gw-card:hover .gw-card-action .arrow {
+            transform: translateX(4px);
+        }
+
+        /* Rain Player 卡片的青蓝按钮 */
+        .action-sky {
+            background: linear-gradient(135deg, rgba(142, 197, 252, 0.15), rgba(41, 168, 185, 0.15));
+            border: 1px solid rgba(142, 197, 252, 0.3);
+            color: var(--rain-sky);
+        }
+        .gw-card:hover .action-sky {
+            background: linear-gradient(135deg, rgba(142, 197, 252, 0.25), rgba(41, 168, 185, 0.25));
+            box-shadow: 0 0 20px rgba(142, 197, 252, 0.15);
+        }
+
+        /* MilLune Player 卡片的紫粉按钮 */
+        .action-violet {
+            background: linear-gradient(135deg, rgba(167, 139, 250, 0.15), rgba(236, 72, 153, 0.12));
+            border: 1px solid rgba(167, 139, 250, 0.3);
+            color: rgb(167, 139, 250);
+        }
+        .gw-card:hover .action-violet {
+            background: linear-gradient(135deg, rgba(167, 139, 250, 0.25), rgba(236, 72, 153, 0.2));
+            box-shadow: 0 0 20px rgba(167, 139, 250, 0.15);
+        }
+
+        /* 底部信息 */
+        .gateway-footer {
+            text-align: center;
+            animation: fadeSlideUp 0.8s 0.4s ease-out both;
+        }
+        .gateway-footer p {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.2);
+            letter-spacing: 0.1em;
+        }
+
+        /* 分隔线 "OR" */
+        .gw-divider {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 60px;
+            align-self: center;
+        }
+        .gw-divider::before,
+        .gw-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(142, 197, 252, 0.25), transparent);
+        }
+        .gw-divider span {
+            padding: 0 0.6rem;
+            font-size: 0.7rem;
+            color: rgba(142, 197, 252, 0.35);
+            letter-spacing: 0.15em;
+            font-weight: 600;
+        }
+
+        /* 响应式 */
+        @media (max-width: 760px) {
+            .gateway-cards {
+                flex-direction: column;
+                align-items: center;
+                gap: 1.5rem;
+            }
+            .gw-card {
+                width: min(340px, 90vw);
+            }
+            .gw-divider {
+                width: auto;
+                padding: 0;
+            }
+            .gw-divider::before,
+            .gw-divider::after { display: none; }
+            .gw-divider span { display: none; }
+            .gateway-title { font-size: 1.6rem; }
+            .gateway-logo { font-size: 2.8rem; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- 背景 -->
+<div class="gateway-bg"></div>
+<div class="stars" id="stars"></div>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<!-- 主内容 -->
+<div class="gateway-container">
+
+    <!-- 标题 -->
+    <div class="gateway-header">
+        <div class="gateway-logo">🌧️</div>
+        <div class="gateway-title">MILTHM RENDER</div>
+        <div class="gateway-subtitle">雨 之 韵 律 · 渲 染 版 本</div>
+    </div>
+
+    <!-- 两张卡片 -->
+    <div class="gateway-cards">
+
+        <!-- Rain Player -->
+        <a class="gw-card" href="./rain player/index.html">
+            <div class="gw-card-cover">
+                <img src="./rain player/Background.png" alt="Rain Player">
+                <span class="gw-card-badge badge-player">V1</span>
+            </div>
+            <div class="gw-card-body">
+                <span class="gw-card-icon">🌧️</span>
+                <div class="gw-card-name">Rain Player</div>
+                <div class="gw-card-desc">WebGL 谱面播放器，可多参数调整；使用unity引擎（可能已弃用）</div>
+                <span class="gw-card-action action-sky">
+                    进入 <span class="arrow">→</span>
+                </span>
+            </div>
+        </a>
+
+        <!-- 分隔 -->
+        <div class="gw-divider"><span>OR</span></div>
+
+        <!-- MilLune Player -->
+        <a class="gw-card" href="./MilLune Player/index.html">
+            <div class="gw-card-cover">
+                <img src="./MilLune Player/Background.png" alt="MilLune Player">
+                <span class="gw-card-badge badge-editor">V2</span>
+            </div>
+            <div class="gw-card-body">
+                <span class="gw-card-icon">🌙</span>
+                <div class="gw-card-name">MilLune Player</div>
+                <div class="gw-card-desc">谱面播放工具，增加游玩体验，从外部结算</div>
+                <span class="gw-card-action action-violet">
+                    进入 <span class="arrow">→</span>
+                </span>
+            </div>
+        </a>
+
+    </div>
+
+    <!-- 底部 -->
+    <div class="gateway-footer">
+        <p>MILTHM &copy; 雨之韵律 · 仅供学习交流</p>
+    </div>
+
+</div>
+
+<script>
+    // 生成星空
+    (function() {
+        const container = document.getElementById('stars');
+        const count = 80;
+        for (let i = 0; i < count; i++) {
+            const star = document.createElement('div');
+            star.classList.add('star');
+            const size = Math.random() * 2 + 1;
+            star.style.width = size + 'px';
+            star.style.height = size + 'px';
+            star.style.left = Math.random() * 100 + '%';
+            star.style.top = Math.random() * 100 + '%';
+            star.style.setProperty('--dur', (Math.random() * 3 + 2) + 's');
+            star.style.setProperty('--max-o', (Math.random() * 0.5 + 0.3).toFixed(2));
+            star.style.animationDelay = -(Math.random() * 5) + 's';
+            container.appendChild(star);
+        }
+    })();
+</script>
+
+</body>
+</html>
