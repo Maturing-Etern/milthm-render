@@ -6,7 +6,6 @@
 <title>Milthm 查分器 · 雨之韵律</title>
 <meta name="description" content="Milthm 查分器 - 精准计算 Reality 分数，分析音游成绩">
     <script src="js/constant.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="js/sql-wasm.js"></script>
 <style>
 /* ==================== 字体 ==================== */
@@ -817,6 +816,8 @@ function clearResults() {
     document.getElementById('statTlr').textContent = '—';
     document.getElementById('fileStatus').textContent = '';
     document.getElementById('exportBtn').style.display = 'none';
+    window._exportData = null;
+    window._originalInput = null;
 }
 
 /* ==================================================================
@@ -1052,6 +1053,9 @@ function startProcess() {
                 '\n}';
             textarea.value = formatted;
 
+            // 存储全局数据供导出使用
+            window._exportData = { username: result.username, avgReality: avgReality.toFixed(4), tlrValue: tlrFormatted, items };
+            window._originalInput = textarea.value;
             // 渲染
             renderResults({
                 username: result.username,
@@ -1127,35 +1131,147 @@ document.addEventListener('keydown', function(e) {
 console.log('%c Milthm 查分器 · 雨之韵律 ', 'font-size:18px;font-weight:bold;color:#8ec5fc;');
 console.log('%c 核心算法已就绪', 'font-size:12px;color:#29a8b9;');
 
-/* ========== 导出图片 ========== */
+/* ========== Canvas 导出图片（含背景图、曲绘、等级徽章） ========== */
+function loadImage(src) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = src;
+    });
+}
 function exportImage() {
     const overlay = document.getElementById('exportOverlay');
-    const results = document.getElementById('results');
     overlay.classList.add('active');
-
-    // 高分辨率截图：scale 2x
-    html2canvas(results, {
-        scale: 2,
-        backgroundColor: '#0a0e17',
-        allowTaint: false,
-        useCORS: true,
-        logging: false
-    }).then(canvas => {
-        const link = document.createElement('a');
-        link.download = 'milthm_scores.png';
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+    const statusEl = document.getElementById('fileStatus');
+    const data = window._exportData;
+    if (!data || !data.items || !data.items.length) {
+        statusEl.textContent = '⚠ 请先解析数据';
         overlay.classList.remove('active');
-    }).catch(err => {
-        overlay.classList.remove('active');
-        document.getElementById('fileStatus').textContent = '⚠ 导出图片失败: ' + err.message;
+        return;
+    }
+    const items = data.items;
+    const cardCount = items.length;
+    const actualCardCount = Math.min(cardCount, items.length);
+    // 动态高度
+    const baseHeight = 2200;
+    const newHeight = 400 + Math.ceil((actualCardCount / 2) * 165);
+    const canvasHeight = Math.max(baseHeight, newHeight);
+    const canvas = document.createElement('canvas');
+    canvas.width = 1200;
+    canvas.height = canvasHeight;
+    const ctx = canvas.getContext('2d');
+    // 加载背景图（优先随机背景，失败则纯黑）
+    const bgPromise = loadImage(`./jpgs/background/${Math.floor(Math.random() * 3)}.jpg`);
+    bgPromise.then(bgImage => {
+        if (bgImage) {
+            ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+        } else {
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+        // 半透明标题栏
+        ctx.fillStyle = 'rgba(128,128,128,0.3)';
+        ctx.fillRect(0, 50, canvas.width, 200);
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+        ctx.lineWidth = 3;
+        ctx.moveTo(550, 250);
+        ctx.lineTo(650, 50);
+        ctx.stroke();
+        // 标题
+        ctx.font = '50px Arial';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText('Milthm-calculator', 100, 130);
+        ctx.font = '30px Arial';
+        ctx.fillText('http://mhtlim.top/', 100, 180);
+        ctx.font = '20px Arial';
+        ctx.fillText('Updated: 2026-05-09', 100, 210);
+        // 玩家信息
+        ctx.font = '25px Arial';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(`Player: ${data.username}`, 660, 100);
+        ctx.fillText(`Reality: ${data.avgReality}`, 660, 135);
+        ctx.fillText(`Ytilaer: ${data.tlrValue}`, 660, 170);
+        const now = new Date();
+        const dateStr = `${now.toISOString().split('T')[0]} ${now.toTimeString().split(' ')[0]}`;
+        ctx.fillText(`Date: ${dateStr}`, 660, 205);
+        // 加载所有曲绘和等级徽章
+        Promise.all(items.map(i => Promise.all([
+            loadImage(`./jpgs/${encodeURIComponent(i.name.replace(/[#?]/g, ''))}.jpg`).catch(() => loadImage('./jpgs/NYA.jpg')),
+            loadImage(`./jpgs/${i.bestLevel}.png`).catch(() => null)
+        ]))).then(imgs => {
+            // 绘制歌曲卡片
+            const cardW = 442, cardH = 130, imgW = 185, imgH = 104, icon = 91;
+            const x0 = 110, y0 = 350, col = 520, row = 162.5;
+            items.forEach((it, i) => {
+                const x = x0 + (i % 2) * col, y = y0 + Math.floor(i / 2) * row - (i % 2 ? 0 : 50);
+                // 卡底
+                ctx.fillStyle = 'rgba(128,128,128,.4)';
+                ctx.fillRect(x, y, cardW, cardH);
+                // 排名号
+                ctx.font = '17px Arial';
+                ctx.textAlign = 'right';
+                ctx.textBaseline = 'top';
+                ctx.fillStyle = i < 20 ? '#FAFAFA' : '#C9C9C9';
+                ctx.fillText(`#${i + 1}`, x + cardW - 10, y + 7);
+                // 分数渐变
+                const scoreStr = it.bestScore.toString().padStart(7, '0');
+                const isHighRank = it.bestLevel < 3;
+                if (isHighRank) {
+                    const g = ctx.createLinearGradient(x, y + 52, x, y + 91);
+                    g.addColorStop(0, '#99C5FB');
+                    g.addColorStop(1, '#D8C3FA');
+                    ctx.fillStyle = g;
+                } else if (it.bestLevel < 5) {
+                    ctx.fillStyle = '#90CAEF';
+                } else {
+                    ctx.fillStyle = '#FFFFFF';
+                }
+                ctx.font = '39px Arial';
+                ctx.textAlign = 'left';
+                ctx.fillText(scoreStr, x + 208, y + 52);
+                // 歌名（自动缩字）
+                let f = 25;
+                ctx.font = `${f}px Arial`;
+                while (ctx.measureText(it.name).width > 200 && f > 10) { ctx.font = `${--f}px Arial`; }
+                ctx.fillStyle = '#FFF';
+                ctx.fillText(it.name, x + 212, y + 23);
+                // 分类/定数/Reality/准确率
+                ctx.font = '20px Arial';
+                const acc = `${(it.bestAccuracy * 100).toFixed(2)}%`;
+                ctx.fillText(`${it.category} ${parseFloat(it.constant).toFixed(1)} > ${it.singleReality}   ${acc}`, x + 208, y + 98);
+                // 曲绘
+                if (imgs[i][0]) ctx.drawImage(imgs[i][0], x + 13, y + 13, imgW, imgH);
+                // 等级徽章
+                if (imgs[i][1]) ctx.drawImage(imgs[i][1], x + 351, y + 26, icon, icon);
+            });
+            // 导出 PNG（嵌入 userdata）
+            const originalInput = window._originalInput || '';
+            const userdata = 'userdata:' + originalInput;
+            const imgBase64 = canvas.toDataURL('image/png').replace(/^data:image\/png;base64,/, '');
+            const imgBin = atob(imgBase64);
+            const txtBytes = new TextEncoder().encode(userdata);
+            const buf = new Uint8Array(imgBin.length + txtBytes.length);
+            for (let i = 0; i < imgBin.length; i++) buf[i] = imgBin.charCodeAt(i);
+            buf.set(txtBytes, imgBin.length);
+            const blob = new Blob([buf], { type: 'image/png' });
+            const link = document.createElement('a');
+            const t = new Date().toISOString().replace(/[:\-T]/g, '_').split('.')[0];
+            link.download = `milthm_${t}.png`;
+            link.href = URL.createObjectURL(blob);
+            link.click();
+            overlay.classList.remove('active');
+            statusEl.textContent = '✅ 图片已导出';
+        });
     });
 }
 </script>
 <!-- 导出图片遮罩 -->
 <div class="export-overlay" id="exportOverlay">
     <div class="spinner-lg"></div>
-    <p>正在生成图片...</p>
+    <p>正在生成图片，请稍候...</p>
 </div>
 </body>
 </html>
