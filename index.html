@@ -276,6 +276,28 @@
             box-shadow: 0 0 20px rgba(167, 139, 250, 0.15);
         }
 
+        /* 查分器卡片的青绿渐变按钮 */
+        .badge-calc {
+            background: linear-gradient(135deg, rgba(52, 211, 153, 0.25), rgba(16, 185, 129, 0.2));
+            border: 1px solid rgba(52, 211, 153, 0.35);
+            color: rgb(52, 211, 153);
+        }
+        .action-emerald {
+            background: linear-gradient(135deg, rgba(52, 211, 153, 0.15), rgba(16, 185, 129, 0.1));
+            border: 1px solid rgba(52, 211, 153, 0.3);
+            color: rgb(52, 211, 153);
+        }
+        .gw-card:hover .action-emerald {
+            background: linear-gradient(135deg, rgba(52, 211, 153, 0.25), rgba(16, 185, 129, 0.2));
+            box-shadow: 0 0 20px rgba(52, 211, 153, 0.15);
+        }
+        .gw-card.card-calc:hover {
+            border-color: rgba(52, 211, 153, 0.4);
+            box-shadow:
+                0 20px 60px rgba(0, 0, 0, 0.3),
+                0 0 40px rgba(52, 211, 153, 0.1);
+        }
+
         /* 底部信息 */
         .gateway-footer {
             text-align: center;
@@ -384,6 +406,26 @@
                 <div class="gw-card-name">MilLune Player</div>
                 <div class="gw-card-desc">谱面播放工具，增加游玩体验，从外部结算</div>
                 <span class="gw-card-action action-violet">
+                    进入 <span class="arrow">→</span>
+                </span>
+            </div>
+        </a>
+
+        <!-- 分隔 -->
+        <div class="gw-divider"><span>OR</span></div>
+
+        <!-- 查分器 -->
+        <a class="gw-card card-calc" href="./calculator/index.html">
+            <div class="gw-card-cover">
+                <img src="./calculator/static/bg_night.avif" alt="Milthm 查分器"
+                     onerror="this.style.display='none';this.parentElement.style.background='linear-gradient(135deg,#0d2218 0%,#0a1f1a 100%)'">
+                <span class="gw-card-badge badge-calc">Tool</span>
+            </div>
+            <div class="gw-card-body">
+                <span class="gw-card-icon">📊</span>
+                <div class="gw-card-name">Milthm 查分器</div>
+                <div class="gw-card-desc">Reality 分数计算器，上传游戏存档，精确分析成绩与评级分布</div>
+                <span class="gw-card-action action-emerald">
                     进入 <span class="arrow">→</span>
                 </span>
             </div>

@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Usage</title>
+  <script src="./load.js"></script>
+  <link rel="stylesheet" href="./github-markdown-dark.min.css">
+  <script src="./marked.min.js"></script>
+  <script src="./katex.min.js"></script>
+  <link rel="stylesheet" href="./katex.min.css">
+  <script src="./index.umd.js"></script>
+  <link rel="stylesheet" href="./github-dark.min.css">
+  <script src="./highlight.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      box-sizing: border-box;
+      background: #0d1117;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 900px;
+    }
+
+    .markdown-body {
+      width: 100%;
+      overflow-wrap: break-word;
+    }
+
+    .katex-display {
+      display: block !important;
+      text-align: center;
+      margin: 10px 0;
+      font-size: 1em;
+    }
+
+    .toc {
+      display: none;
+    }
+
+    pre,
+    code {
+      user-select: text;
+    }
+
+    .language-selector {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #222;
+      padding: 5px;
+      /* 調小內邊距 */
+      border-radius: 5px;
+      cursor: pointer;
+      color: white;
+      font-size: 2em;
+      /* 可選：縮小字體 */
+    }
+
+    .language-menu {
+      display: none;
+      position: absolute;
+      top: 40px;
+      right: 10px;
+      background: #222;
+      border-radius: 5px;
+      padding: 10px;
+      list-style: none;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    }
+
+    .language-menu li {
+      padding: 8px 12px;
+      cursor: pointer;
+      color: white;
+    }
+
+    .language-menu li:hover {
+      background: #444;
+    }
+
+    /* 隐藏aaa标签的弹窗并允许点击 */
+    div[aaa] {
+      visibility: hidden;
+      opacity: 0;
+      transition: opacity 0.2s ease-in-out, visibility 0.3s ease-in-out;
+
+    }
+
+    /* 显示时的样式 */
+    div[aaa].visible {
+      visibility: visible;
+      opacity: 1;
+    }
+  </style>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-L5K3QVRHFZ"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-L5K3QVRHFZ');
+  </script>
+</head>
+
+<body>
+  <!-- 语言选择按钮 -->
+  <div class="language-selector" onclick="toggleLanguageMenu()">🌐</div>
+  <ul class="language-menu" id="language-menu">
+    <li onclick="changeLanguage('zh')">中文</li>
+    <li onclick="changeLanguage('zh-tw')">繁體中文</li>
+    <li onclick="changeLanguage('en')">English</li>
+    <li onclick="changeLanguage('ja')">日本語</li>
+    <li onclick="changeLanguage('ko')">한국어</li>
+    <li onclick="changeLanguage('ru')">Русский</li>
+    <li onclick="changeLanguage('es')">Español</li>
+    <li onclick="changeLanguage('vi')">Tiếng Việt</li>
+  </ul>
+  <div class="container">
+    <article id="content" class="markdown-body"></article>
+  </div>
+  <script>
+    marked.use(markedKatex());
+    marked.setOptions({
+      highlight: (code, lang) => {
+        if (lang && hljs.getLanguage(lang)) return hljs.highlight(code, { language: lang }).value;
+        return hljs.highlightAuto(code).value;
+      }
+    });
+    function getUserLanguage() {
+      const langMap = {
+        "zh": "zh",
+        "zh-cn": "zh",
+        "zh-tw": "zh-tw",
+        "en": "en",
+        "ja": "ja",
+        "ko": "ko",
+        "ru": "ru",
+        "es": "es",
+        "vi": "vi"
+      };
+      // 读取URL参数中的 `lang`（如果存在）
+      const urlParams = new URLSearchParams(window.location.search);
+      let lang = urlParams.get('lang') || navigator.language.toLowerCase();
+      return langMap[lang] || "en"; // 默认英文
+    }
+    function loadMarkdown() {
+      const lang = getUserLanguage();
+      fetch(`./usage_${lang}.md`)
+        .then(res => res.text())
+        .then(md => {
+          // 在这里进行链接的自动转义处理
+          md = md.replace(/\[([^\]]+)\]\(([^)]+)\)/g, function (match, p1, p2) {
+            // 只处理包含 'info:' 的链接
+            if (p2.startsWith('info:')) {
+              const [protocol, rest] = p2.split(':', 2);  // 分离协议和剩余部分
+              const encodedRest = encodeURIComponent(rest);  // 对剩余部分进行编码
+              return `[${p1}](${protocol}:${encodedRest})`;  // 保持 'info:' 协议不变
+            }
+            const encodedUrl = p2;
+            return `[${p1}](${encodedUrl})`;
+          });
+          content.innerHTML = marked.parse(md, { headerIds: true, mangle: false });
+          content.querySelectorAll('h2,h3,h4').forEach(h => {
+            h.id = h.innerText.toLowerCase().replace(/\s+/g, '-');
+          });
+          hljs.highlightAll();
+          resizeKatex();
+          runJavascriptLinks();
+          loaddiv()
+        })
+        .catch(() => {
+          content.innerHTML = `<p style="color: red;">未找到 <b>usage_${lang}.md</b> 文件</p>`;
+        });
+    }
+
+    function runJavascriptLinks() {
+      const links = document.querySelectorAll('a[href^="info:info"], a[href^="info:info"]');
+      links.forEach(link => {
+        link.addEventListener('click', function (event) {
+          event.preventDefault(); // 阻止默认的链接跳转
+        });
+      });
+    }
+
+    function resizeKatex() {
+      const w = document.querySelector('.markdown-body').clientWidth;
+      document.querySelectorAll('.katex-display').forEach(e => {
+        e.style.fontSize = ''; // 先还原默认大小
+        const actual = e.scrollWidth;
+        if (actual > w) {
+          const fs = parseFloat(getComputedStyle(e).fontSize);
+          e.style.fontSize = (fs * w / actual) + 'px';
+        }
+      });
+    }
+
+    function toggleLanguageMenu() {
+      const menu = document.getElementById("language-menu");
+      menu.style.display = (menu.style.display === "block") ? "none" : "block";
+    }
+    function changeLanguage(lang) {
+      // 刷新页面并加上 `?lang=xx` 参数
+      window.location.search = `?lang=${lang}`;
+    }
+    // 初始化
+    window.addEventListener('resize', resizeKatex);
+    window.addEventListener('load', loadMarkdown);
+    function checkMouseOnLink(event) {
+      const target = event.target;
+
+      // 确保鼠标停留在一个链接上
+      if (target.tagName === 'A') {
+        const url = decodeURIComponent(target.href); // 解码链接URL
+
+        const regex = /(info)\(([^)]*)\)/;
+        const match = url.match(regex);
+
+        if (match) {
+          const funcName = match[1];
+          const params = match[2].split(',').map(param => param.trim().replace(/['"]/g, ''));  // 获取函数参数并去除引号
+
+          // 获取链接的位置信息
+          const linkRect = target.getBoundingClientRect();
+
+          // 鼠标停留在链接时处理显示
+          if (params.length === 2) {
+            // 如果有两个参数，将aaa设置为显示状态，并显示为 "a,b"
+            const [param1, param2] = params;
+            const aaaElement = document.querySelector(`div[aaa="${param1},${param2}"]`);
+            if (aaaElement) {
+              aaaElement.classList.add('visible');
+
+              // 计算div的位置，放置在链接的正下方，并确保div的中心与链接的中心对齐
+              const topPosition = linkRect.bottom + window.scrollY; // 计算顶部位置
+              let leftPosition = linkRect.left + linkRect.width / 2 + window.scrollX - aaaElement.offsetWidth / 2; // 计算左边位置，居中显示
+
+              // 确保div不超出屏幕左边或右边
+              const screenWidth = window.innerWidth;
+              const elementWidth = aaaElement.offsetWidth;
+              if (leftPosition + elementWidth > screenWidth) {
+                leftPosition = screenWidth - elementWidth; // 超出右边界时调整
+              } else if (leftPosition < 0) {
+                leftPosition = 0; // 超出左边界时调整
+              }
+
+              // 设置div的位置
+              aaaElement.style.position = 'absolute';
+              aaaElement.style.top = `${topPosition}px`;
+              aaaElement.style.left = `${leftPosition}px`;
+
+            }
+          }
+          // 检查是否只有一个参数
+          else if (params.length === 1 && params[0]) {
+            // 如果有一个参数，将aaa设置为显示状态，并显示为 "a"
+            const [param] = params;
+            const aaaElement = document.querySelector(`div[aaa="${param}"]`);
+            if (aaaElement) {
+              aaaElement.classList.add('visible');
+
+              // 计算div的位置，放置在链接的正下方，并确保div的中心与链接的中心对齐
+              const topPosition = linkRect.bottom + window.scrollY; // 计算顶部位置
+              let leftPosition = linkRect.left + linkRect.width / 2 + window.scrollX - aaaElement.offsetWidth / 2; // 计算左边位置，居中显示
+
+              // 确保div不超出屏幕左边或右边
+              const screenWidth = window.innerWidth;
+              const elementWidth = aaaElement.offsetWidth;
+              if (leftPosition + elementWidth > screenWidth) {
+                leftPosition = screenWidth - elementWidth; // 超出右边界时调整
+              } else if (leftPosition < 0) {
+                leftPosition = 0; // 超出左边界时调整
+              }
+
+              // 设置div的位置
+              aaaElement.style.position = 'absolute';
+              aaaElement.style.top = `${topPosition}px`;
+              aaaElement.style.left = `${leftPosition}px`;
+
+            }
+          }
+
+          // 鼠标移开时将 aaa 元素隐藏
+          target.addEventListener('mouseleave', () => {
+            if (params.length === 2) {
+              const aaaElement = document.querySelector(`div[aaa="${params.join(',')}"]`);
+              if (aaaElement) {
+                aaaElement.classList.remove('visible');
+              }
+            } else if (params.length === 1 && params[0]) {
+              const aaaElement = document.querySelector(`div[aaa="${params[0]}"]`);
+              if (aaaElement) {
+                aaaElement.classList.remove('visible');
+              }
+            }
+          });
+        }
+      }
+    }
+
+
+    // 在文档上监听鼠标移动事件
+    document.addEventListener('mousemove', checkMouseOnLink);
+
+  </script>
+</body>
+
+</html>

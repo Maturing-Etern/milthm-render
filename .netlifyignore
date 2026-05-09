@@ -1,0 +1,23 @@
+# 敏感文件：含数据库密码，绝对不能发布到公网
+calculator/fc.php
+calculator/user/
+calculator/wtf/
+calculator/changelog.php
+calculator/submit.php
+
+# 开发/构建产物
+.git/
+.gitignore
+*.md
+!.nojekyll
+
+# 编辑器配置
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 其他无关文件
+__serve.js
+DEPLOY.md
+.netlifyignore

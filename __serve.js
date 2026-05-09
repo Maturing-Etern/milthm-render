@@ -5,9 +5,11 @@ const root = __dirname;
 const mime = {
   html: 'text/html', css: 'text/css', js: 'application/javascript',
   png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
-  ico: 'image/x-icon', ttf: 'font/ttf', woff: 'font/woff',
+  ico: 'image/x-icon', ttf: 'font/ttf', woff: 'font/woff', woff2: 'font/woff2',
   wasm: 'application/wasm', bin: 'application/octet-stream',
   zip: 'application/zip', json: 'application/json',
+  avif: 'image/avif', webp: 'image/webp', gif: 'image/gif', svg: 'image/svg+xml',
+  txt: 'text/plain', md: 'text/markdown',
   data: 'application/octet-stream', mrp: 'application/octet-stream'
 };
 const server = http.createServer((req, res) => {

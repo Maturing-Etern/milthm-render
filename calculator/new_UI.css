@@ -1,0 +1,297 @@
+.superlink {
+    text-decoration: underline;
+    cursor: pointer;
+    color: lightblue;
+}
+
+.container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 5px;
+    width: 100%;
+    justify-content: space-between;
+}
+
+.card-inside {
+    border-radius: 5px;
+    height: 100%;
+    padding: 0px;
+    position: relative;
+    text-align: left;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.card {
+    min-width: 0;
+    border-radius: 5px;
+    padding: 5px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    position: relative;
+    text-align: left;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.score {
+    font-weight: bold;
+    text-align: center;
+    overflow: visible;
+    color: #DDA0DD;
+    width: 100%;
+}
+
+.index {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    color: #D3D3D3;
+}
+
+.title {
+    color: #D3D3D3;
+    margin-bottom: 5px;
+    white-space: nowrap;
+}
+
+.info {
+    width: 80%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #D3D3D3
+}
+
+.accuracy {
+    color: #D3D3D3;
+}
+
+body {
+    background-image: url("./static/bg_night.avif");
+    background-attachment: fixed;
+    background-size: cover;
+}
+
+#languageButton,.lb-style {
+    background-color: rgba(33, 33, 33, 0.1) !important;
+    backdrop-filter: blur(6px);
+    border-radius: 10px !important;
+    border: 1px solid #aaaaaa2a !important;
+    padding: 3px;
+}
+
+.rccc {
+    /* background-color: rgba(33, 33, 33, 0.3) !important; */
+    background-color: rgba(33, 33, 33, 0.35) !important;
+    backdrop-filter: blur(24px);
+    border-radius: 16px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+    border: 1px solid #aaaaaa12 !important;
+}
+
+.settingsModal {
+    background-color: rgba(50, 50, 50, 0.3) !important;
+    backdrop-filter: blur(6px);
+    border-radius: 16px !important;
+    border: 1px solid #aaaaaa2a !important;
+}
+
+.settingsModal input, .inputR {
+    background-color: rgba(33, 33, 33, 0.144) !important;
+    border-radius: 12px !important;
+    border-color: #00000000 !important;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.407) !important;
+}
+
+.settingsModal input:hover, .inputR:hover {
+    border-color: #73cb8c !important;
+}
+
+.settingsModal input:focus, .inputR:focus {
+    border-color: #73cb8c !important;
+}
+
+.settingsModal .apply-btn {
+    border-color: #00000000 !important;
+    background-color: #2c9f4d71 !important;
+}
+
+.settingsModal .cancel-btn {
+    border-color: #00000000 !important;
+    background-color: #6d6d6d32 !important;
+}
+
+.settingsModal button {
+    border-radius: 24px !important;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3) !important;
+}
+
+.settingsModal button:hover {
+    border-color: aliceblue !important;
+}
+
+.settingsModal select {
+    background-color: rgba(33, 33, 33, 0.3) !important;
+    border-radius: 10px !important;
+    border: 1px solid #aaaaaa2a !important;
+    padding: auto;
+}
+
+.layui-collapse {
+    border: 0px !important;
+}
+
+.layui-layer {
+    background-color: rgba(33, 33, 33, 0.68) !important;
+    backdrop-filter: blur(6px);
+    border-radius: 10px !important;
+    border: 1px solid #aaaaaa2a !important;
+}
+
+#languageMenu {
+    background-color: rgba(33, 33, 33, 0.5) !important;
+    backdrop-filter: blur(6px);
+    border-radius: 10px !important;
+    border: 1px solid #aaaaaa2a !important;
+}
+
+#languageMenu div:hover {
+    background-color: rgba(255, 255, 255, 0.3) !important;
+    border-radius: 8px;
+}
+
+.layui-layer-shade {
+    background-color: rgba(0, 0, 0, 0.8) !important;
+}
+
+#inputData,.layui-layer-input,.textareaR {
+    border-color: #00000000 !important;
+    border-radius: 16px !important;
+    background-color: rgba(33, 33, 33, 0.1) !important;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+}
+
+#inputData:focus,.layui-layer-input:focus {
+    border-color: #73cb8c !important;
+    background-color: rgba(33, 33, 33, 0.5) !important;
+}
+
+#inputData:hover,.layui-layer-input:hover {
+    border-color: #73cb8c !important;
+}
+
+.layui-btn,.layui-layer-btn0,.layui-layer-btn1 {
+    border-radius: 24px !important;
+    background-color: #595d8352 !important;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3) !important;
+    border-color: #00000000 !important;
+}
+
+.layui-btn:hover,.layui-layer-btn0:hover,.layui-layer-btn1:hover {
+    border-color: #ffffff !important;
+    background-color: #595d83bf !important;
+    color: #ffffff !important;
+}
+
+.header-opa-bg2 {
+    color: #ffffff;
+    text-align: center;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5) !important;
+    background-color: rgba(33, 33, 33, 0.3) !important;
+    backdrop-filter: blur(12px);
+}
+.nowrap{
+    white-space: nowrap !important;
+}
+.saves_list_container{
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    max-height: 50vh;
+    padding: 16px;
+    box-sizing: border-box;
+    overflow: scroll;
+    border-radius: 6px;
+    background-color: rgba(34, 34, 34, 0.186);
+    box-shadow:inset 0 4px 8px rgba(0, 0, 0, 0.5) !important;
+}
+.saves_list_container table{
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5) !important;
+    border: 0px !important;
+    border-radius: 12px !important;
+    background-color: rgba(102, 108, 173, 0.066) !important;
+    
+}
+.saves_list_container button{
+    /* nowrap */
+    white-space: nowrap;
+    width: 100%;
+    font-size: small !important;
+}
+/* second */
+.saves_list_container table tbody tr td:nth-child(5){
+    white-space:nowrap !important;
+    text-overflow:ellipsis;
+    max-width:64vw;
+    max-height: 16vh !important;
+    overflow: hidden;
+    word-break:keep-all;
+}
+.saves_list_container table thead tr th{
+    white-space: nowrap;
+}
+.saves_list_container table tbody tr{
+    max-height: 16vh !important;
+}
+.saves_list_container .action{
+    white-space: nowrap;
+    font-size: small !important;
+    color:lightblue;
+    border: 1px solid #ffffff47;
+    padding: 6px;
+    border-radius: 16px;
+    box-sizing: border-box;
+    line-height:36px !important;
+}
+.saves_list_container .delete{
+    color:rgb(255, 133, 133);
+}
+.superlinkR{
+    color:lightblue !important;
+    text-decoration: none;
+    white-space: nowrap !important;
+    font-size: normal !important;
+}
+.superlinkR:hover{
+    color:rgb(223, 246, 255) !important;
+}
+
+.settingsModal, .overlay{
+    animation: show 0.3s;
+}
+@keyframes show {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+
+#debug_new_ui_css_show{
+    display:inline !important;
+}
+#debug_new_ui_css_hide{
+    display:none !important;
+}
+
+
+
+/* global font change */
+body {
+  font-family: "ZCOOL XiaoWei", cursive !important;
+  font-weight: 400;
+  font-style: normal;
+}

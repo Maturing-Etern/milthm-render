@@ -1,0 +1,16 @@
+主要负责人：
+    • <a href="https://mkzi-nya.github.io/" {}>mkzi_nya</a> (查分核心功能开发&脚本&基本实现开发)
+    • <a href="https://k9.lv/klm/" {}>4everDimensions</a> (UI/前端&后端&托管&云相关功能开发)
+    • <a href="https://github.com/jsjsjsjsjsjsjson" {}>libchara-dev</a>
+    • Autumn
+
+特别鸣谢：
+    • <a href="https://mkzi-nya.github.io/" {}>mkzi_nya (归梦)</a>
+    • <a href="https://k9.lv/klm/" {}>4everDimensions</a>
+    • <a href="https://github.com/jsjsjsjsjsjsjson" {}>libchara-dev</a>
+    • Autumn
+    • Panyi
+    • Eric_Lian
+
+感谢所有参与贡献的人！
+Copyleft 2024~2025. Reality Calculator Project.
