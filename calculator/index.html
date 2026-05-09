@@ -6,6 +6,7 @@
 <title>Milthm 查分器 · 雨之韵律</title>
 <meta name="description" content="Milthm 查分器 - 精准计算 Reality 分数，分析音游成绩">
 <script src="js/constant.js"></script>
+<script src="js/sql-wasm.js"></script>
 <style>
 /* ==================== 字体 ==================== */
 @font-face {
@@ -789,69 +790,183 @@ function clearResults() {
 /* ==================================================================
    文件导入
    ================================================================== */
-document.getElementById('fileInput').addEventListener('change', function(e) {
+document.getElementById('fileInput').addEventListener('change', async function(e) {
     const file = e.target.files[0];
     if (!file) return;
-    document.getElementById('fileStatus').textContent = '读取中...';
+    const status = document.getElementById('fileStatus');
+    status.textContent = '读取中...';
+    const name = file.name.toLowerCase();
 
+    // --- .db 文件：二进制 SQLite 数据库，使用 SQL.js ---
+    if (name.endsWith('.db')) {
+        const r = new FileReader();
+        r.onload = async () => {
+            try {
+                status.textContent = '正在加载 SQL 引擎...';
+                const SQL = await initSQL();
+                const db = new SQL.Database(new Uint8Array(r.result));
+                const tables = getAllTables(db);
+                if (tables.includes('kv')) {
+                    status.textContent = '正在解析 saves.db...';
+                    processDBFile(r.result, SQL);
+                } else if (tables.includes('scores')) {
+                    status.textContent = '正在解析 data.db...';
+                    const scores = extractScores(db);
+                    processHistoryRecords(scores);
+                } else {
+                    status.textContent = '⚠ 数据库中未找到 kv 或 scores 表';
+                }
+            } catch (err) {
+                status.textContent = '⚠ 解析 .db 失败: ' + err.message;
+            }
+        };
+        r.onerror = () => { status.textContent = '⚠ 读取 .db 失败'; };
+        r.readAsArrayBuffer(file);
+        e.target.value = '';
+        return;
+    }
+
+    // --- 其他文本文件：JSON / TXT / XML / REG / PNG ---
     const reader = new FileReader();
     reader.onload = function(ev) {
         const content = ev.target.result;
-        const name = file.name;
 
-        if (name.endsWith('.json') || name.endsWith('.txt') || name.endsWith('.db')) {
-            // JSON / 文本数据
+        if (name.endsWith('.json') || name.endsWith('.txt')) {
             const extracted = extractJSON(content);
             if (extracted) {
                 document.getElementById('inputData').value = extracted;
-                document.getElementById('fileStatus').textContent = '文件就绪 ✓';
-                // 自动解析
+                status.textContent = '文件就绪 ✓';
                 startProcess();
             } else {
                 document.getElementById('inputData').value = content;
-                document.getElementById('fileStatus').textContent = '文件已载入，请手动解析';
+                status.textContent = '文件已载入，请手动解析';
             }
         } else if (name.endsWith('.xml')) {
-            const doc = new DOMParser().parseFromString(content, 'application/xml');
-            const pf = doc.querySelector('string[name="PlayerFile"]');
-            if (pf && pf.textContent) {
-                document.getElementById('inputData').value = decodeURIComponent(pf.textContent);
-                document.getElementById('fileStatus').textContent = 'XML 解析完成 ✓';
-                startProcess();
-            } else {
-                document.getElementById('fileStatus').textContent = 'XML 格式无法识别';
-            }
+            processXMLFile(content, status);
         } else if (name.endsWith('.reg')) {
-            const match = content.match(/"PlayerFile_h\d+"\s*=\s*hex:((?:[0-9a-fA-F]{2},?[\\\n\s]*)+)/);
-            if (match) {
-                const decoded = match[1].replace(/[,\\\s\n]/g, '').match(/.{2}/g).map(b => String.fromCharCode(parseInt(b, 16))).join('');
-                document.getElementById('inputData').value = decoded;
-                document.getElementById('fileStatus').textContent = '.reg 解析完成 ✓';
-                startProcess();
-            } else {
-                document.getElementById('fileStatus').textContent = '.reg 格式无法识别';
-            }
+            processRegFile(content, status);
         } else if (name.endsWith('.png')) {
-            const udMatch = content.match(/userdata:([\s\S]+)/);
-            if (udMatch) {
-                document.getElementById('inputData').value = udMatch[1].trim();
-                document.getElementById('fileStatus').textContent = 'PNG 数据提取完成 ✓';
-                startProcess();
-            } else {
-                document.getElementById('fileStatus').textContent = 'PNG 中未找到 userdata';
-            }
+            processPNGFile(content, status);
         } else {
-            document.getElementById('fileStatus').textContent = '不支持的文件类型';
+            status.textContent = '不支持的文件类型';
         }
     };
+    reader.onerror = () => { status.textContent = '⚠ 读取文件失败'; };
     reader.readAsText(file);
     e.target.value = '';
 });
+
+/* ---------- 文件类型处理器 ---------- */
 
 function extractJSON(str) {
     const start = str.indexOf('{');
     const end = str.indexOf(']}]', start);
     return (start !== -1 && end !== -1) ? str.slice(start, end + 3) + '}' : null;
+}
+
+function processXMLFile(content, status) {
+    const doc = new DOMParser().parseFromString(content, 'application/xml');
+    const pf = doc.querySelector('string[name="PlayerFile"]');
+    if (pf && pf.textContent) {
+        document.getElementById('inputData').value = decodeURIComponent(pf.textContent);
+        status.textContent = 'XML 解析完成 ✓';
+        startProcess();
+    } else {
+        status.textContent = 'XML 格式无法识别';
+    }
+}
+
+function processRegFile(content, status) {
+    const match = content.match(/"PlayerFile_h\d+"\s*=\s*hex:((?:[0-9a-fA-F]{2},?[\\\n\s]*)+)/);
+    if (match) {
+        const decoded = match[1].replace(/[,\\\s\n]/g, '').match(/.{2}/g).map(b => String.fromCharCode(parseInt(b, 16))).join('');
+        document.getElementById('inputData').value = decoded;
+        status.textContent = '.reg 解析完成 ✓';
+        startProcess();
+    } else {
+        status.textContent = '.reg 格式无法识别';
+    }
+}
+
+function processPNGFile(content, status) {
+    const udMatch = content.match(/userdata:([\s\S]+)/);
+    if (udMatch) {
+        document.getElementById('inputData').value = udMatch[1].trim();
+        status.textContent = 'PNG 数据提取完成 ✓';
+        startProcess();
+    } else {
+        status.textContent = 'PNG 中未找到 userdata';
+    }
+}
+
+/* ---------- SQLite (.db) 解析 ---------- */
+
+async function initSQL() {
+    const resp = await fetch('./js/sql-wasm.wasm');
+    const wasmBinary = await resp.arrayBuffer();
+    return await initSqlJs({ locateFile: f => './js/' + f, wasmBinary });
+}
+
+function getAllTables(db) {
+    const names = [];
+    const stmt = db.prepare("SELECT name FROM sqlite_master WHERE type='table'");
+    while (stmt.step()) names.push(stmt.getAsObject().name);
+    stmt.free();
+    return names;
+}
+
+function processDBFile(arrayBuffer, SQL) {
+    const db = new SQL.Database(new Uint8Array(arrayBuffer));
+    let results = db.exec("SELECT value FROM kv WHERE key='PlayerFileV2'");
+    if (!results.length || !results[0].values.length) {
+        results = db.exec("SELECT value FROM kv WHERE key='PlayerFile'");
+    }
+    if (!results.length || !results[0].values.length) {
+        document.getElementById('fileStatus').textContent = '⚠ 未找到 PlayerFile/PlayerFileV2';
+        return;
+    }
+    const raw = results[0].values[0][0];
+    const extracted = extractJSON(raw);
+    if (extracted) {
+        document.getElementById('inputData').value = extracted;
+        document.getElementById('fileStatus').textContent = '.db 解析完成 ✓';
+        startProcess();
+    } else {
+        document.getElementById('fileStatus').textContent = '⚠ 数据库存档解析失败';
+    }
+}
+
+function extractScores(db) {
+    const scores = [];
+    const stmt = db.prepare("SELECT * FROM scores");
+    while (stmt.step()) scores.push(stmt.getAsObject());
+    stmt.free();
+    return scores;
+}
+
+function processHistoryRecords(scores) {
+    const items = [];
+    for (const s of scores) {
+        const co = constants[s.chart_id];
+        if (!co) continue;
+        items.push({
+            singleRealityRaw: reality(s.score, co.constant),
+            singleReality: reality(s.score, co.constant).toFixed(2),
+            constant: co.constant,
+            name: co.name, category: co.category,
+            bestScore: s.score,
+            bestAccuracy: (s.score_accuracy || 0).toFixed(4),
+            bestLevel: s.grade ? (typeof s.grade === 'string' ? { R:0,APM:1,AP:2,FCM:3,FC:4,M:5,S:6,A:7,B:8,C:9,F:10 }[s.grade] || 10 : s.grade) : 10
+        });
+    }
+    const username = scores[0]?.username || 'Player';
+    items.sort((a, b) => b.singleRealityRaw - a.singleRealityRaw);
+    const formatted = '[' + username + '],{\n  ' +
+        items.map(i => `[${i.name},${i.category},${i.constant},${i.bestScore},${i.bestAccuracy},${i.bestLevel}]`).join(',\n  ') +
+        '\n}';
+    document.getElementById('inputData').value = formatted;
+    document.getElementById('fileStatus').textContent = `data.db 解析完成 (${items.length} 首) ✓`;
+    startProcess();
 }
 
 /* ==================================================================
