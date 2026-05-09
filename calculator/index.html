@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Milthm 查分器 · 雨之韵律</title>
 <meta name="description" content="Milthm 查分器 - 精准计算 Reality 分数，分析音游成绩">
+<script src="js/constant.js"></script>
 <style>
 /* ==================== 字体 ==================== */
 @font-face {
@@ -612,7 +613,7 @@ function processSong(song) {
 // ---------- 解析旧格式 ----------
 function processSongFromOldFormat(record) {
     const { BeatmapID, BestScore, BestAccuracy, BestLevel, AchievedStatus } = record;
-    const constantObj = window.__constants ? window.__constants[BeatmapID] : null;
+    const constantObj = constants[BeatmapID];
     if (!constantObj) return null;
     const { constant, category, name } = constantObj;
     const singleRealityRaw = reality(BestScore, constant);
