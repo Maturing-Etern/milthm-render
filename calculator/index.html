@@ -649,12 +649,16 @@ function processData(inputText) {
         const songData = songDataStr.split('],[');
         items = songData.map(processSong);
     } else {
-        const start = inputData.indexOf('{"UserName":');
-        const end = inputData.indexOf('}]}') + 3;
-        const str = inputData.slice(start, end);
+        // 提取最外层 JSON 对象（不依赖字段顺序）
+        const jsonStart = inputData.indexOf('{');
+        const jsonEnd = inputData.lastIndexOf('}');
+        if (jsonStart === -1 || jsonEnd === -1) {
+            return { error: '数据格式无法识别，请检查输入内容' };
+        }
+        const str = inputData.slice(jsonStart, jsonEnd + 1);
         let parsed;
         try { parsed = JSON.parse(str); } catch (e) { parsed = null; }
-        if (!(parsed && parsed.SongRecords)) {
+        if (!parsed || !parsed.SongRecords) {
             return { error: '数据格式无法识别，请检查输入内容' };
         }
         username = parsed.UserName;
@@ -845,7 +849,7 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
 });
 
 function extractJSON(str) {
-    const start = str.indexOf('{"UserName":');
+    const start = str.indexOf('{');
     const end = str.indexOf(']}]', start);
     return (start !== -1 && end !== -1) ? str.slice(start, end + 3) + '}' : null;
 }
