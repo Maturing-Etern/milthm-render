@@ -1,703 +1,979 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
-
+<html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Milthm 查分器（原Reality计算器）</title>
-    <meta name="description" content="Milthm音游查分器 - 精准计算Reality分数，提供详细音游成绩分析。在线使用。">
-    <meta name="keywords" content="Milthm, Reality, 查分器, 音游, Reality计算, 节奏游戏, 成绩分析">
-    <meta name="author" content="MkziAndInetPigman">
-    <meta name="robots" content="index, follow">
-    <meta property="og:title" content="Milthm音游查分器 - Reality计算工具">
-    <meta property="og:description" content="详细分析Reality分数，提升你的游戏水平">
-    <meta property="og:type" content="website">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Milthm 查分器 · 雨之韵律</title>
+<meta name="description" content="Milthm 查分器 - 精准计算 Reality 分数，分析音游成绩">
+<style>
+/* ==================== 字体 ==================== */
+@font-face {
+    font-family: 'milFont';
+    src: url('../rain player/Fonts/milfont.ttf') format('truetype');
+    font-weight: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'milFontBold';
+    src: url('../rain player/Fonts/milfont_bold.ttf') format('truetype');
+    font-weight: bold;
+    font-display: swap;
+}
 
-    <link rel="icon" type="image/x-icon" href="./favicon.ico">
-    <link rel="stylesheet" href="new_UI.css">
-    <script src="js/constant.js"></script>
-    <link href="./layui/css/layui.css" rel="stylesheet">
-    <script src="//cdn.jsdelivr.net/npm/echarts@5.1.1/dist/echarts.min.js"></script>
-    <link href="//fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+/* ==================== 设计令牌 ==================== */
+:root {
+    --font-primary: 'milFont', 'Segoe UI', system-ui, sans-serif;
+    --font-bold: 'milFontBold', 'milFont', 'Segoe UI', system-ui, sans-serif;
+    --font-mono: 'Consolas', 'Fira Code', monospace;
+    --rain-sky: rgb(142, 197, 252);
+    --rain-teal: rgb(41, 168, 185);
+    --rain-sky-dark: rgb(128, 178, 228);
+    --rain-teal-dark: rgb(37, 153, 168);
+    --bg-dark: #1a1a2e;
+    --panel-dark: #16213e;
+    --text-light: #e0e6ed;
+    --text-dim: rgba(255,255,255,0.55);
+    --text-muted: rgba(255,255,255,0.35);
+    --accent-glow: rgba(142, 197, 252, 0.25);
+    --border-glow: rgba(142, 197, 252, 0.12);
+    --border-active: rgba(142, 197, 252, 0.35);
+    --shadow-neon: 0 0 25px rgba(142, 197, 252, 0.06);
+    --success: #4db6ac;
+    --error: #ef5350;
+    --warning: #ffb74d;
+    --gold: #ffd700;
+    --radius-sm: 0.5em;
+    --radius-md: 0.8em;
+    --radius-lg: 1.2em;
+    --radius-xl: 2em;
+    --transition: 200ms ease-out;
+    /* 分类主题色 */
+    --cat-theme: #7c4dff;
+    --cat-amethyst: #ce93d8;
+    --cat-sapphire: #42a5f5;
+    --cat-emerald: #66bb6a;
+    --cat-ruby: #ef5350;
+    --cat-default: var(--rain-sky);
+}
 
-    <script>
-        var mhtlim_top = true;
-        function doTarget(it) {
-            if (mhtlim_top) { it(); }
-        }
+/* ==================== 重置 & 基础 ==================== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
-        function setCookie(name, value, days) {
-            var expires = "";
-            if (days) {
-                var date = new Date();
-                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-                expires = "; expires=" + date.toUTCString();
-            }
-            document.cookie = name + "=" + (value || "") + expires + "; path=/";
-        }
+html, body {
+    width: 100%; min-height: 100vh;
+    font-family: var(--font-primary);
+    background: var(--bg-dark);
+    color: var(--text-light);
+    overflow-x: hidden;
+}
 
-        function getCookie(name) {
-            var nameEQ = name + "=";
-            var ca = document.cookie.split(';');
-            for (var i = 0; i < ca.length; i++) {
-                var c = ca[i];
-                while (c.charAt(0) === ' ') c = c.substring(1, c.length);
-                if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
-            }
-            return null;
-        }
+body {
+    background-image:
+        radial-gradient(ellipse 70% 50% at 80% 20%, rgba(142, 197, 252, 0.06) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 60% at 20% 90%, rgba(41, 168, 185, 0.05) 0%, transparent 60%);
+    background-attachment: fixed;
+}
 
-        function oiiaioooooiai(v) {
-            try { return eval(v); } catch (e) { return -1; }
-        }
+/* ==================== 滚动条 ==================== */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); border-radius: 8px; }
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(to bottom, var(--rain-sky), var(--rain-teal));
+    border-radius: 8px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(to bottom, var(--rain-sky-dark), var(--rain-teal-dark));
+    background-clip: padding-box;
+}
 
-        var latest_versions = {
-            "cha_newui.js": 7,
-            "new_ui.js": 8,
-            "upload4index.js": 3
-        };
+/* ==================== 雨幕动画 ==================== */
+.rain-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+}
+.raindrop {
+    position: absolute;
+    top: -10px;
+    width: 1.5px;
+    height: 56px;
+    background: linear-gradient(to bottom, transparent, rgba(142, 197, 252, 0.4));
+    border-radius: 1px;
+    opacity: 0;
+    animation: fall linear infinite;
+}
+@keyframes fall {
+    0%   { transform: translateY(-20vh) scale(0.5); opacity: 0; }
+    5%   { opacity: 0.7; }
+    50%  { opacity: 0.5; }
+    100% { transform: translateY(105vh) scale(1); opacity: 0; }
+}
 
-        function checkVersions() {
-            var ruOK = true;
-            var v_e = "";
-            if (oiiaioooooiai('cha_newui_js_ver') !== latest_versions["cha_newui.js"]) { ruOK = false; v_e += "cha_newui.js\n"; }
-            if (oiiaioooooiai('new_ui_js_ver') !== latest_versions["new_ui.js"]) { ruOK = false; v_e += "new_ui.js\n"; }
-            if (oiiaioooooiai('upload4index_js_ver') !== latest_versions["upload4index.js"]) { ruOK = false; v_e += "upload4index.js\n"; }
-            if (!ruOK) {
-                layer.open({
-                    title: '版本异常',
-                    content: 'JS文件检测异常，请尝试删除缓存并刷新页面',
-                    btn: ['查看详情', '忽略并继续'],
-                    yes: function (index, layero) {
-                        layer.open({
-                            type: 1,
-                            title: 'JS版本异常',
-                            content: `<div style="padding:20px;line-height:22px;font-size:16px;text-align:center;">
-<h3>以下文件发生异常：</h3><p>${v_e}</p><br>
-<h3>是什么导致了这个问题？</h3>
-<p>可能是因为本网站的js代码已经更新，但是你的浏览器仍然在使用旧版本的js缓存，导致版本和当前页面所需版本不匹配。这可能引起一些未知的问题。</p>
-<p>另外，如果你的浏览器过旧，也很可能出现这个问题。（这种情况是无解的）</p><br>
-<h3>我要怎么做</h3>
-<p>刷新你的浏览器缓存，电脑上可以尝试 Ctrl + Shift + R，Shift + F5 等快捷键，手机上可以尝试退出浏览器，长按浏览器点击应用信息，找到储存空间，点击清除缓存（注意不是清除数据！），然后重新打开即可。</p></div>`,
-                            area: ['80vw', '80vh'],
-                            shade: 0.6,
-                            shadeClose: true
-                        });
-                    }
-                });
-            }
-        }
-    </script>
+/* ==================== 头部 ==================== */
+.hero {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 40px 20px 30px;
+    background: linear-gradient(180deg, rgba(22,33,62,0.6) 0%, transparent 100%);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-glow);
+}
+.hero h1 {
+    font-family: var(--font-bold);
+    font-size: 2.2rem;
+    background: linear-gradient(135deg, var(--rain-sky), var(--rain-teal));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+}
+.hero p {
+    color: var(--text-dim);
+    font-size: 0.92rem;
+    letter-spacing: 0.04em;
+}
 
-    <input type="file" id="fileupLoad" style="display:none;" />
+/* ==================== 容器 ==================== */
+.app {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+}
 
-    <style>
-        #languageMenu {
-            position: absolute;
-            right: 0;
-            top: 40px;
-            display: none;
-            background-color: #333;
-            color: #eee;
-            border: 1px solid #444;
-            border-radius: 4px;
-            padding: 5px;
-            min-width: 100px;
-            z-index: 9999;
-        }
-        #languageMenu div { margin: 5px; cursor: pointer; padding: 3px 5px; }
-        #languageMenu div:hover { background-color: #444; }
+/* ==================== 玻璃卡片 ==================== */
+.glass {
+    background: linear-gradient(145deg, rgba(22,33,62,0.85), rgba(26,26,46,0.9));
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border-glow);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3), var(--shadow-neon);
+    transition: border-color var(--transition), box-shadow var(--transition);
+}
+.glass:hover {
+    border-color: var(--border-active);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.35), 0 0 30px rgba(142,197,252,0.08);
+}
 
-        .settingsModal {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #fff;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7);
-            z-index: 10000;
-            box-sizing: content-box !important;
-            width: 300px;
-        }
-        .settingsModal h3 { text-align: center; font-size: 18px; margin-bottom: 20px; }
-        .settingsModal input,
-        .settingsModal button {
-            margin-bottom: 15px;
-            padding: 8px;
-            width: 100%;
-            background-color: #444;
-            color: #fff;
-            border: 1px solid #555;
-            border-radius: 12px;
-            font-size: 16px;
-        }
-        .settingsModal input { box-sizing: border-box !important; }
-        .settingsModal input:focus,
-        .settingsModal button:focus { outline: none; border-color: #888; }
-        .settingsModal button { width: 48%; display: inline-block; cursor: pointer; }
+/* ==================== 输入区 ==================== */
+.input-panel {
+    padding: 28px;
+    margin-bottom: 24px;
+}
+.input-panel .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 14px;
+}
+.input-panel .toolbar .label {
+    color: var(--rain-sky);
+    font-family: var(--font-bold);
+    font-size: 1rem;
+    letter-spacing: 0.03em;
+}
+.input-panel textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: 14px;
+    background: rgba(0,0,0,0.35);
+    border: 1px solid var(--border-glow);
+    border-radius: var(--radius-md);
+    color: var(--text-light);
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    line-height: 1.5;
+    resize: vertical;
+    outline: none;
+    transition: border-color var(--transition), box-shadow var(--transition);
+}
+.input-panel textarea:focus {
+    border-color: rgba(142, 197, 252, 0.45);
+    box-shadow: 0 0 18px rgba(142, 197, 252, 0.08);
+}
+.input-panel textarea::placeholder {
+    color: var(--text-muted);
+}
 
-        #overlay, .overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.45);
-            z-index: 9999;
-        }
+/* ==================== 按钮 ==================== */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 22px;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-bold);
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: all var(--transition);
+    letter-spacing: 0.03em;
+}
+.btn-primary {
+    background: linear-gradient(135deg, var(--rain-sky), var(--rain-teal));
+    color: #fff;
+    box-shadow: 0 3px 14px rgba(142, 197, 252, 0.25);
+}
+.btn-primary:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+    box-shadow: 0 5px 20px rgba(142, 197, 252, 0.35);
+}
+.btn-outline {
+    background: rgba(142, 197, 252, 0.08);
+    border: 1px solid var(--border-glow);
+    color: var(--text-dim);
+}
+.btn-outline:hover {
+    background: rgba(142, 197, 252, 0.16);
+    border-color: var(--border-active);
+    color: var(--text-light);
+}
+.btn-success {
+    background: linear-gradient(135deg, #4db6ac, #26a69a);
+    color: #fff;
+    box-shadow: 0 3px 14px rgba(77, 182, 172, 0.2);
+}
+.btn-success:hover {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+}
 
-        body {
-            margin: 0; padding: 0;
-            width: 100%; height: 100vh;
-            background-color: #000;
-            overflow: auto;
-        }
+/* ==================== 统计面板 ==================== */
+.stats-bar {
+    display: none;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+.stats-bar.visible { display: grid; }
 
-        .rain {
-            overflow: hidden;
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            pointer-events: none;
-            z-index: -1;
-        }
-        .raindrop {
-            position: absolute;
-            top: -10px;
-            width: 2px;
-            height: 64px;
-            background-color: rgb(126, 137, 207);
-            border-radius: 1px;
-            opacity: 0;
-            animation: fall linear;
-        }
-        @keyframes fall {
-            0%   { transform: translateY(-20vh) scale(0.5); opacity: 0; }
-            5%   { opacity: 0.8; }
-            50%  { opacity: 0.6; }
-            100% { transform: translateY(100vh) scale(1); opacity: 0; }
-        }
-    </style>
+.stat-card {
+    padding: 20px;
+    text-align: center;
+}
+.stat-card .stat-icon {
+    font-size: 1.3rem;
+    margin-bottom: 6px;
+    opacity: 0.7;
+}
+.stat-card .stat-value {
+    font-family: var(--font-bold);
+    font-size: 1.8rem;
+    background: linear-gradient(135deg, var(--rain-sky), var(--rain-teal));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.2;
+}
+.stat-card .stat-label {
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    margin-top: 4px;
+    letter-spacing: 0.04em;
+}
+.stat-card .stat-sub {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
 
-    <script src="./js/sql-wasm.js"></script>
-    <script>
-        var enableExperimentalFeatures = true;
-        var rain_anim_length = 1.5;
-        var rain_interval_ms = 50;
-        var rain_interval;
-        var removeTime = 2000;
+/* ==================== 结果列表 ==================== */
+.results {
+    display: none;
+}
+.results.visible { display: block; }
 
-        function createRainDrop() {
-            const l = 0.5 + Math.random() * rain_anim_length;
-            const rain = document.querySelector(".rain");
-            const drop = document.createElement("div");
-            drop.classList.add("raindrop");
-            drop.style.left = Math.random() * window.innerWidth + "px";
-            drop.style.animationDuration = l + "s";
-            rain.appendChild(drop);
-            setTimeout(() => { rain.removeChild(drop); }, 1000 * l);
-        }
+/* 分类标题 */
+.category-header {
+    padding: 14px 20px;
+    margin: 20px 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-left: 3px solid var(--cat-default);
+}
+.category-header .cat-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.category-header .cat-name {
+    font-family: var(--font-bold);
+    font-size: 0.95rem;
+    color: var(--text-light);
+}
+.category-header .cat-count {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-left: auto;
+}
 
-        document.addEventListener("DOMContentLoaded", function () {
-            rain_interval = setInterval(createRainDrop, rain_interval_ms);
-        });
+/* 歌曲行 */
+.song-row {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    gap: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    transition: background var(--transition);
+    cursor: default;
+}
+.song-row:hover {
+    background: rgba(142, 197, 252, 0.04);
+}
+.song-row:last-child { border-bottom: none; }
 
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./js/sw.js')
-                .then(reg => console.log("Service Worker 注册成功:", reg.scope))
-                .catch(err => console.log("Service Worker 注册失败:", err));
-        }
+.song-rank {
+    width: 32px;
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    flex-shrink: 0;
+}
+.song-rank.top3 { font-family: var(--font-bold); }
+.song-rank.r1 { color: #ffd700; }
+.song-rank.r2 { color: #c0c0c0; }
+.song-rank.r3 { color: #cd7f32; }
 
-        function downloadImage_pr() {
-            layer.msg('正在生成图片，由于需要下载图片资源，可能需要一些时间。若一直没有反应，可以多次尝试。');
-            downloadImage();
-        }
-    </script>
-    <script>
-        function checkForUpdate() {
-            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-                navigator.serviceWorker.controller.postMessage("checkForUpdate");
-            }
-        }
-        window.addEventListener("load", checkForUpdate);
-    </script>
-    <style>
-    /* ── 纯静态模式：隐藏所有账号/云存档 UI ── */
-    #logInfo,
-    #over2lay,
-    #loginModal,
-    #loginPanel-t,
-    #loginPanel-normal,
-    button[onclick="javascript:openSavesBrowser()"],
-    a[onclick="reg_user()"],
-    #uploadSavesPanel { display: none !important; }
-    </style>
+.song-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.88rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.song-const {
+    width: 50px;
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    flex-shrink: 0;
+}
+.song-score {
+    width: 80px;
+    text-align: right;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    flex-shrink: 0;
+}
+.song-acc {
+    width: 65px;
+    text-align: right;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    flex-shrink: 0;
+}
+.song-level {
+    width: 36px;
+    text-align: center;
+    font-size: 0.72rem;
+    flex-shrink: 0;
+}
+.song-reality {
+    width: 70px;
+    text-align: right;
+    font-family: var(--font-bold);
+    font-size: 0.95rem;
+    flex-shrink: 0;
+}
+
+/* Reality 颜色等级 */
+.r-gold { color: #ffd700; }
+.r-green { color: #4db6ac; }
+.r-blue { color: var(--rain-sky); }
+.r-orange { color: #ffb74d; }
+.r-gray { color: var(--text-dim); }
+
+/* 等级徽章 */
+.lv-badge {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 3px;
+    font-size: 0.68rem;
+    font-weight: 600;
+}
+.lv-ez  { background: rgba(102, 187, 106, 0.2); color: #66bb6a; }
+.lv-nr  { background: rgba(66, 165, 245, 0.2); color: #42a5f5; }
+.lv-hd  { background: rgba(206, 147, 216, 0.2); color: #ce93d8; }
+.lv-ec  { background: rgba(239, 83, 80, 0.2); color: #ef5350; }
+.lv-fc  { background: rgba(255, 215, 0, 0.2); color: #ffd700; }
+
+/* 清除 + 空状态 */
+.clear-btn-wrap {
+    text-align: center;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+}
+.empty-state {
+    text-align: center;
+    padding: 50px 20px;
+    color: var(--text-muted);
+}
+.empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 10px; }
+.empty-state .empty-text { font-size: 0.9rem; }
+
+/* ==================== 文件输入隐藏 ==================== */
+#fileInput { display: none; }
+
+/* ==================== 加载动画 ==================== */
+.spinner {
+    display: inline-block;
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.15);
+    border-top-color: var(--rain-sky);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ==================== 响应式 ==================== */
+@media (max-width: 768px) {
+    .hero h1 { font-size: 1.5rem; }
+    .stats-bar { grid-template-columns: 1fr; }
+    .song-row { flex-wrap: wrap; padding: 8px 12px; gap: 6px; }
+    .song-rank { width: 24px; }
+    .song-score { width: auto; }
+    .song-acc { width: auto; }
+    .song-const { width: auto; }
+    .song-reality { width: auto; }
+    .input-panel { padding: 18px; }
+    .app { padding: 16px 12px; }
+}
+
+@media (max-width: 480px) {
+    .hero { padding: 24px 14px 20px; }
+    .hero h1 { font-size: 1.2rem; }
+    .stat-card .stat-value { font-size: 1.4rem; }
+    .btn { padding: 8px 14px; font-size: 0.8rem; }
+}
+</style>
 </head>
-
 <body>
-    <div class="rain"></div>
-    <script src="./layui/layui.js"></script>
-    <script src="./new_ui.js"></script>
 
-    <!-- Header -->
-    <div class="layui-header header-opa">
-        <div class="layui-logo header-opa-bg2" style="padding: 16px;">
-            <div class="header-opa-content">
-                <h1 style="color:turquoise;">
-                    <div>
-                        <span style="color:lightskyblue">
-                            <img src="./static/title.webp" alt="logo" style="height:42px;margin-right:10px;">
-                        </span>
-                        <span style="font-size:small;color:lightgreen;">&nbsp;v4-aX</span>
-                    </div>
-                </h1>
-            </div>
+<!-- 雨幕 -->
+<div class="rain-canvas" id="rainCanvas"></div>
+
+<!-- 头部 -->
+<header class="hero">
+    <h1>☁ Milthm 查分器</h1>
+    <p>Reality 分数计算 · 成绩分析 · 数据可视化</p>
+</header>
+
+<!-- 主应用 -->
+<div class="app">
+
+    <!-- 输入面板 -->
+    <div class="glass input-panel">
+        <div class="toolbar">
+            <span class="label">📋 数据输入</span>
+            <button class="btn btn-primary" onclick="startProcess()" id="parseBtn">▶ 解析</button>
+            <button class="btn btn-outline" onclick="document.getElementById('fileInput').click()">📁 导入文件</button>
+            <input type="file" id="fileInput" accept=".json,.txt,.xml,.reg,.db,.png">
+            <span id="fileStatus" style="font-size:0.78rem;color:var(--text-muted);margin-left:auto;"></span>
+        </div>
+        <textarea id="inputData" placeholder="在此粘贴查分数据...&#10;&#10;支持格式：&#10;· 新格式: [用户名],{[曲名,分类,定数,分数,准确率,等级],...}&#10;· 旧格式: JSON 存档数据&#10;· 也支持 .db / .txt / .json / .xml 文件导入"></textarea>
+    </div>
+
+    <!-- 统计面板 -->
+    <div class="stats-bar" id="statsBar">
+        <div class="glass stat-card">
+            <div class="stat-icon">👤</div>
+            <div class="stat-value" id="statUser">—</div>
+            <div class="stat-label">玩家</div>
+        </div>
+        <div class="glass stat-card">
+            <div class="stat-icon">⭐</div>
+            <div class="stat-value" id="statAvg">—</div>
+            <div class="stat-label">B20 平均 Reality</div>
+            <div class="stat-sub">Top 20 曲目</div>
+        </div>
+        <div class="glass stat-card">
+            <div class="stat-icon">📊</div>
+            <div class="stat-value" id="statTlr">—</div>
+            <div class="stat-label">TRL</div>
+            <div class="stat-sub">理论 Reality 上限</div>
         </div>
     </div>
 
-    <!-- Top-right controls -->
-    <div style="position:absolute;right:20px;top:20px;z-index:114514;">
-        <button id="languageButton" style="background:transparent;border:none;cursor:pointer;font-size:20px;">🌐</button>
-        <button class="lb-style" id="rainSettingsButton" onclick="javascript:openRainSettings();" style="background:transparent;border:none;cursor:pointer;font-size:20px;">🌧️</button>
-        <div id="languageMenu">
-            <div id="langZh">简体中文</div>
-            <div id="langZhTw">繁體中文</div>
-            <div id="langEn">English</div>
-            <div id="langJa">日本語</div>
-            <div id="langKo">한국어</div>
-            <div id="langRu">Русский</div>
-            <div id="langEs">Español</div>
-            <div id="langVi">Tiếng Việt</div>
+    <!-- 结果区域 -->
+    <div class="results" id="results">
+        <div id="resultContent"></div>
+        <div class="clear-btn-wrap">
+            <button class="btn btn-outline" onclick="clearResults()">🧹 清除结果</button>
         </div>
     </div>
 
-    <!-- Main content -->
-    <div style="padding:30px;text-align:center;display:flex;">
-        <div style="text-align:left;max-width:1200px;margin:auto;">
-
-            <!-- 温馨提示 -->
-            <div class="layui-card rccc">
-                <div class="layui-card-header">温馨提示</div>
-                <div class="layui-card-body">
-                    <span style="font-size:1.4514em">在使用前请务必查看重要使用说明！！！</span>
-                    <a href="javascript:void(0);" onclick="openIN();"><span class="superlinkR">重要说明！</span></a>
-                    <br>
-                    <span style="font-size:1.4514em">查看文档：</span>
-                    <a href="./usage/usage.html" target="_blank"><span class="superlinkR" data-i18n="viewUsage">查看帮助信息</span></a>
-                    <hr>
-                    <span>更新日志：</span>
-                    <a href="javascript:void(0);" onclick="open_changelog()"><span class="superlinkR">查看更新日志</span></a><br>
-                    <span data-i18n="qqGroup">反馈交流 QQ群：</span>
-                    <a href="https://qm.qq.com/q/Utb6sNDvki" target="_blank"><span class="superlinkR" data-i18n="viewQQGroup">Mhtlim#√-1洨巟羣</span></a><br>
-                    <span data-i18n="siteAuthor">网站作者：</span>
-                    <a href="javascript:void(0);" onclick="show_author_info();" class="superlinkR" data-i18n="viewAuthor">查看</a>&nbsp;
-                    <span data-i18n="donationText">赞助：</span>
-                    <a href="javascript:void(0);" onclick="show_donation();" class="superlinkR" data-i18n="donation">捐赠</a><br>
-                    <span data-i18n="visit">本站访问数量：</span>
-                    <span id="accessCount">--</span>
-                    <a class="superlinkR" href="javascript:void(0);" onclick="openStat();">查看访问统计</a><br>
-                    务必查看使用须知：
-                    <a href="javascript:void(0);" onclick="show_alertInfo();"><span class="superlinkR">查看使用须知</span></a>
-                    <hr>
-                    <div style="padding:3px;">
-                        <span id="logInfo">正在检测登录状态...</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 友情链接 -->
-            <div class="layui-card rccc">
-                <div class="layui-card-header">友情链接</div>
-                <div class="layui-card-body">
-                    <a href="https://mkzi-nya.github.io/milthm-calculator-web/index.html" target="_blank"><span class="superlinkR">Mkzi Nya Edition</span></a> |
-                    <a href="http://xuziyao.com/" target="_blank"><span class="superlinkR">Dason's Page</span></a> |
-                    <a href="https://milthm.adproqwq.top/" target="_blank"><span class="superlinkR">Adpro's Page</span></a>
-                </div>
-            </div>
-
-            <!-- 数据处理 -->
-            <div class="layui-card rccc">
-                <div class="layui-card-header" data-i18n="dataProcessing">数据处理</div>
-                <div class="layui-card-body">
-                    <textarea id="inputData" class="layui-textarea" placeholder="粘贴数据在此处... / Paste Data Here..."></textarea>
-                    <hr />
-                    <button class="layui-btn layui-btn-primary" onclick="javascript:startProcess();" data-i18n="parse">解析</button>
-                    <button class="layui-btn layui-btn-primary" onclick="javascript:upl_pre();" data-i18n="uploadFile">导入文件</button>
-                    <hr />
-                    <button class="layui-btn layui-btn-primary" onclick="javascript:downloadImage_pr();" data-i18n="generateImage">生成图像</button>
-                    <button class="layui-btn layui-btn-primary" onclick="showSettings();" data-i18n="settings">查分图设置</button>
-                    <br>
-                    <div id="picgen" style="display:none;">
-                        <br>
-                        <span id="img_gen_process" class="layui-badge layui-bg-black" data-i18n="generatingImage">请稍候...</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 数据处理结果 -->
-            <div class="layui-card rccc" id="usercontainer" style="display:none;">
-                <div class="layui-card-header" data-i18n="dataResult">数据处理结果</div>
-                <div class="layui-card-body">
-                    <h3 data-i18n="userInfo">用户信息：</h3>
-                    <h4 id="userInfo"></h4>
-                    <hr />
-                    <h3 data-i18n="uploadYourSaves">上传你的存档：</h3>
-                    <a href="javascript:void(0);" class="superlinkR" onclick="javascript:doSavesUpload();" data-i18n="uploadBtnText">上传</a>
-                    <hr />
-                    <h3 data-i18n="charts">图表：</h3>
-                    <button class="layui-btn layui-btn-primary" onclick="javascript:changeColumns(1);" data-i18n="increaseColumn">增加列</button>
-                    <button class="layui-btn layui-btn-primary" onclick="javascript:changeColumns(-1);" data-i18n="decreaseColumn">减少列</button>
-                    <br><hr />
-                    <div class="container" id="output"></div>
-                </div>
-            </div>
-
-        </div>
+    <!-- 空状态 -->
+    <div class="glass empty-state" id="emptyState">
+        <div class="empty-icon">🎵</div>
+        <div class="empty-text">输入数据后点击「解析」按钮查看查分结果</div>
     </div>
 
-    <!-- Overlays & Modals -->
-    <div id="overlay" class="overlay" onclick="closeSettings()"></div>
-    <div id="settingsModal" class="settingsModal" style="border:1px solid #eee;">
-        <h3 data-i18n="settingsTitle">查分图设置</h3>
-        <label for="cardCount" data-i18n="cardCountLabel" style="font-size:18px;">卡片数量:</label>
-        <input type="number" id="cardCount" value="22" min="1" data-i18n-placeholder="cardCountPlaceholder"><br>
-        <label for="bgImage" data-i18n="bgImageLabel" style="font-size:18px;">更换背景图:</label>
-        <input type="file" id="bgImage" accept="image/*"><br>
-        <label for="excludeReality" data-i18n="excludeRealityLabel" style="font-size:18px;">绘制不记入Reality的曲目:</label>
-        <select id="excludeReality" style="font-size:16px;">
-            <option value="false">false</option>
-            <option value="true">true</option>
-        </select><br>
-        <label for="yrjds" data-i18n="yrjds" style="font-size:18px;">展示愚人节定数:</label>
-        <select id="yrjds" style="font-size:16px;">
-            <option value="false">false</option>
-            <option value="true">true</option>
-        </select><br>
-        <hr />
-        <button onclick="closeSettings()" class="cancel-btn" data-i18n="cancel">取消</button>
-        <button onclick="applySettings()" class="apply-btn" data-i18n="apply">应用</button>
-    </div>
+</div>
 
-    <!-- Login Modal -->
-    <div id="over2lay" class="overlay" onclick="javascript:closeLogin();"></div>
-    <div class="settingsModal" id="loginModal" style="border:1px solid #eee;display:none;">
-        <div style="text-align:left;">
-            <h2>Authencation (身份验证)</h2><hr>
-            <b style="font-size:1.1451em;text-shadow:0px 0px 10px rgb(0,225,255),0px 0px 20px #fff;">不是你的TapTap或其他任何平台的账户！</b><br><hr>
-            <div id="loginPanel-t" style="display:none;padding:6px;border:1px solid #ffffff33;color:#fff;background-color:#ffffff33;border-radius:16px">
-                <b id="loginPanel-t-text">Loading...</b>
-            </div>
-            <div id="loginPanel-normal">
-                <h4>Username / 用户名：</h4>
-                <input type="text" class="layui-input inputR" id="login_username" />
-                <h4>Password / 密码：</h4>
-                <input type="password" class="layui-input inputR" id="login_password" />
-                <hr />
-                <a href="javascript:void(0);" onclick="show_alertInfo();"><span class="superlinkR">查看使用条款</span></a>
-                <hr />
-                <button class="apply-btn" id="login_btn">Login / 登录</button>
-                <button class="cancel-btn" onclick="closeLogin()">Cancel / 取消</button>
-                <hr />
-                <p>或者，在输入用户名和密码后 <a class="superlinkR" href="javascript:void(0);" onclick="reg_user()">注册</a></p>
-                <hr />
-            </div>
-        </div>
-    </div>
+<script>
+/* ==================================================================
+   核心查分算法
+   ================================================================== */
 
-    <!-- Upload Modal -->
-    <div id="over3lay" class="overlay" onclick="javascript:closeUploadPanel();"></div>
-    <div class="settingsModal" id="uploadModal" style="border:1px solid #eee;display:none;">
-        <div style="text-align:left;">
-            <h2>Upload / 上传</h2><hr>
-            <div id="uploadPanel-t" style="display:none;padding:6px;border:1px solid #ffffff33;color:#fff;background-color:#ffffff33;border-radius:16px">
-                <b id="uploadPanel-t-text">Loading...</b>
-            </div>
-            <div id="uploadPanel-normal">
-                <h4>这里不是导入文件解析的地方！这是云存档储存！不要把db文件一堆乱码复制到这来！</h4><hr>
-                <h4>Title / 标题：</h4>
-                <input type="text" class="layui-input inputR" id="upload_title" />
-                <h4>Description / 描述：</h4>
-                <textarea type="text" class="layui-textarea inputR" id="upload_description"></textarea>
-                <br>
-                <h4>Main Info / 主要信息：<span id="upload_info" style="box-sizing:border-box;padding:3px;border:1px solid #ffffff33;color:#fff;background-color:rgba(255,255,255,0.08);border-radius:16px">Loading...</span></h4>
-                <h4>Data / 数据：</h4>
-                <div id="upload_data_display" style="box-sizing:border-box;padding:3px;border:1px solid #ffffff33;color:#fff;background-color:rgba(255,255,255,0.08);border-radius:16px"></div>
-                <span style="display:none;" id="upload_data"></span>
-                <br><hr />
-                <a href="javascript:void(0);" onclick="show_alertInfo();"><span class="superlinkR">查看使用条款</span></a>
-                <br><hr />
-                <button class="apply-btn" id="upload_btn">Upload / 上传</button>
-                <button class="cancel-btn" onclick="closeUploadPanel()">Cancel / 取消</button>
-            </div>
-        </div>
-    </div>
+// ---------- Reality 计算 ----------
+function reality(score, c) {
+    if (c < 0.001) return 0;
+    if (score >= 1005000) return 1 + c;
+    if (score >= 995000) return 1.4 / (Math.exp(363.175 - score * 0.000365) + 1) - 0.4 + c;
+    if (score >= 980000) return ((Math.exp(3.1 * (score - 980000) / 15000) - 1) / (Math.exp(3.1) - 1)) * 0.8 - 0.5 + c;
+    if (score >= 700000) return score / 280000 - 4 + c;
+    return 0;
+}
 
-    <!-- User Panel -->
-    <div id="over5lay" class="overlay" onclick="javascript:closeUserPanel();"></div>
-    <div class="settingsModal" id="userModal" style="border:1px solid #eee;display:none;">
-        <div style="text-align:left;">
-            <h2>
-                <a href="javascript:void(0);" style="font-size:large;color:#fff;text-decoration:none;padding:6px;border:1px solid #ffffff33;background-color:rgba(255,255,255,0.08);border-radius:16px" onclick="javascript:closeUserPanel();">返回</a>
-                用户设置
-            </h2><hr />
-            <a class="nowrap superlinkR" href="javascript:void(0);" onclick="javascript:securityDesc();">密保设置</a><br>
-            <a class="nowrap superlinkR" href="javascript:void(0);" onclick="javascript:nickNameSettings();">昵称设置</a><br>
-            <a class="nowrap superlinkR" href="javascript:void(0);" onclick="javascript:logoutAll();">在所有设备上登出</a>
-        </div>
-    </div>
+// ---------- 反推分数 ----------
+function findScore(constant, target) {
+    if (target <= constant - 1.5) return 700000;
+    if (target > 1 + constant) return "Unable to deduce points";
+    if (target == (1 + constant)) return 1005000;
+    if (target > 0.3 + constant) {
+        return Math.min(Math.ceil(10000 * (99.5 + Math.log((1.4 / (target + 0.4 - constant)) - 1) / -3.65)), 1005000);
+    } else if (target > -0.5 + constant) {
+        return Math.ceil(980000 + 15000 * (Math.log(((target + 0.5 - constant) / 0.8) * (Math.exp(3.1) - 1) + 1) / 3.1));
+    } else {
+        return Math.ceil((target - constant + 4) * 280000);
+    }
+    return 114514;
+}
 
-    <!-- Scripts -->
-    <script>
-        function showSettings() {
-            document.getElementById('overlay').style.display = 'block';
-            document.getElementById('settingsModal').style.display = 'block';
-        }
-        function closeSettings() {
-            document.getElementById('overlay').style.display = 'none';
-            document.getElementById('settingsModal').style.display = 'none';
-        }
-        function applySettings() {
-            closeSettings();
-        }
-
-        let translations = {}, currentLang = 'zh', menuVisible = false;
-
-        function loadTranslations() {
-            fetch('lang.json').then(r => r.json()).then(data => {
-                translations = data;
-                let detected = (navigator.language || navigator.userLanguage).toLowerCase();
-                if (detected.startsWith('zh')) {
-                    detected = (detected.includes('tw') || detected.includes('hk') || detected.includes('mo')) ? 'zh-tw' : 'zh';
-                }
-                currentLang = translations[detected] ? detected : 'en';
-                setLanguage(currentLang);
-            }).catch(() => setLanguage('en'));
-        }
-
-        function setLanguage(lang) {
-            currentLang = lang;
-            document.documentElement.lang = lang;
-            document.querySelectorAll('[data-i18n]').forEach(el => {
-                const key = el.getAttribute('data-i18n');
-                if (translations[lang] && translations[lang][key]) el.innerHTML = translations[lang][key];
-            });
-            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-                const key = el.getAttribute('data-i18n-placeholder');
-                if (translations[lang] && translations[lang][key]) el.placeholder = translations[lang][key];
-            });
-            menuVisible = false;
-            document.getElementById('languageMenu').style.display = 'none';
-        }
-
-        function toggleLangMenu() {
-            menuVisible = !menuVisible;
-            document.getElementById('languageMenu').style.display = menuVisible ? 'block' : 'none';
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('languageButton').addEventListener('click', toggleLangMenu);
-            document.getElementById('langZh').addEventListener('click', () => setLanguage('zh'));
-            document.getElementById('langZhTw').addEventListener('click', () => setLanguage('zh-tw'));
-            document.getElementById('langEn').addEventListener('click', () => setLanguage('en'));
-            document.getElementById('langJa').addEventListener('click', () => setLanguage('ja'));
-            document.getElementById('langKo').addEventListener('click', () => setLanguage('ko'));
-            document.getElementById('langRu').addEventListener('click', () => setLanguage('ru'));
-            document.getElementById('langEs').addEventListener('click', () => setLanguage('es'));
-            document.getElementById('langVi').addEventListener('click', () => setLanguage('vi'));
-            loadTranslations();
+// ---------- TRL 计算 ----------
+function tlr(items) {
+    let as, ar;
+    if (items.length >= 20) {
+        let aitems = items.slice(0, 20);
+        as = aitems.reduce((sum, i) => sum + i.bestScore, 0) / aitems.length;
+        ar = aitems.reduce((sum, i) => sum + i.singleRealityRaw, 0) / aitems.length;
+        aitems.forEach(i => {
+            i.ltlr = (i.singleRealityRaw - ar) / 20 + reality(as + (i.bestScore - as) / 20, 0);
         });
-    </script>
-
-    <script src="./js/cha_newui.js"></script>
-    <script src="./js/user/upload4index.js"></script>
-
-    <!-- Auto-parse from URL -->
-    <script>
-        function autoParse() {
-            let url = new URL(window.location.href);
-            let data = url.searchParams.get("data");
-            if (data != null) {
-                try {
-                    document.getElementById('inputData').value = atob(data);
-                    startProcess();
-                } catch (e) { console.log(e); }
+        for (let i = 20; i < items.length; i++) {
+            let curr = items[i];
+            let ltlr = (curr.singleRealityRaw - ar) / 20 + reality(as + (curr.bestScore - as) / 20, 0);
+            let minLtlrItem = aitems.reduce((min, x) => x.ltlr < min.ltlr ? x : min);
+            if (ltlr > minLtlrItem.ltlr) {
+                let index = aitems.indexOf(minLtlrItem);
+                curr.ltlr = ltlr;
+                aitems[index] = curr;
+                as = aitems.reduce((sum, i) => sum + i.bestScore, 0) / aitems.length;
+                ar = aitems.reduce((sum, i) => sum + i.singleRealityRaw, 0) / aitems.length;
+                aitems.forEach(i => { i.ltlr = (i.singleRealityRaw - ar) / 20 + reality(as + (i.bestScore - as) / 20, 0); });
             }
         }
-        autoParse();
-    </script>
+        ar = typeof ar !== 'undefined' ? ar : items.slice(0, 20).reduce((sum, i) => sum + (i.singleRealityRaw || 0), 0) / items.slice(0, 20).length;
+        as = typeof as !== 'undefined' ? as : items.slice(0, 20).reduce((sum, i) => sum + (i.bestScore || 0), 0) / items.slice(0, 20).length;
+        return reality(as, ar) - 1;
+    }
+    return 0;
+}
 
-    <!-- Login logic -->
-    <script>
-        var lplt = document.getElementById("loginPanel-t-text");
-        var pr = document.getElementById("loginPanel-normal");
-        var pr2 = document.getElementById("loginPanel-t");
-        var login_username = document.getElementById("login_username");
-        var login_password = document.getElementById("login_password");
-        var login_btn = document.getElementById("login_btn");
+// ---------- 解析新格式 ----------
+function processSong(song) {
+    const [title, category, constant, score, accuracy, level] = song.replace(/[\[\]]/g, '').split(',');
+    const constantVal = parseFloat(constant);
+    const scoreVal = parseInt(score, 10);
+    const accuracyVal = parseFloat(accuracy);
+    const levelVal = parseInt(level, 10);
+    const singleRealityRaw = reality(scoreVal, constantVal);
+    return {
+        singleRealityRaw,
+        singleReality: singleRealityRaw.toFixed(2),
+        constant: constantVal,
+        name: title,
+        category,
+        bestScore: scoreVal,
+        bestAccuracy: accuracyVal.toFixed(4),
+        bestLevel: levelVal
+    };
+}
 
-        login_btn.onclick = function () { login(); };
+// ---------- 解析旧格式 ----------
+function processSongFromOldFormat(record) {
+    const { BeatmapID, BestScore, BestAccuracy, BestLevel, AchievedStatus } = record;
+    const constantObj = window.__constants ? window.__constants[BeatmapID] : null;
+    if (!constantObj) return null;
+    const { constant, category, name } = constantObj;
+    const singleRealityRaw = reality(BestScore, constant);
+    let bl = 0;
+    if (BestLevel == 1) {
+        bl = AchievedStatus.includes(5) ? 1 : (AchievedStatus.includes(4) ? 3 : 5);
+    } else if (BestLevel == 2) {
+        bl = AchievedStatus.includes(5) ? 2 : (AchievedStatus.includes(4) ? 4 : 6);
+    } else if (BestLevel != 0) {
+        bl = BestLevel + 4;
+    }
+    return {
+        singleRealityRaw,
+        singleReality: singleRealityRaw.toFixed(2),
+        constant: constant,
+        name,
+        category,
+        bestScore: BestScore,
+        bestAccuracy: BestAccuracy.toFixed(4),
+        bestLevel: bl
+    };
+}
 
-        function login() {
-            var username = login_username.value;
-            var password = login_password.value;
-            if (username === "" || password === "") return;
-            pr.style.display = "none";
-            var loading = layer.load(1);
-            try {
-                pr2.style.display = "block";
-                lplt.innerHTML = "Logging in... / 正在登入...";
-                fetch("user/requestLogin.php", {
-                    method: "POST",
-                    body: new URLSearchParams({ username, password })
-                }).then(r => r.json()).then(data => {
-                    lplt.innerHTML = data.msg;
-                    layer.msg(data.msg);
-                    pr.style.display = "block";
-                    layer.close(loading);
-                    if (data.code === 0) {
-                        setStorage("username", data.data.username);
-                        setStorage("nickname", data.data.nickName);
-                        setStorage("token", data.token);
-                        closeLogin();
-                        initLogging();
-                        if (!data.hasSecret) alertSetSecret();
-                    }
-                });
-            } catch (e) {
-                lplt.innerHTML = "An error occurred / 发生错误";
-                pr.style.display = "block";
-                layer.close(loading);
+// ---------- 数据入口 ----------
+function processData(inputText) {
+    const inputData = inputText.replace(/\n/g, '').replace(/  /g, '');
+    const format = /^\[.*\],\{.*\}$/.test(inputData) ? 'new' : 'old';
+
+    let username, items;
+    if (format === 'new') {
+        const [, uname, songDataStr] = inputData.match(/^\[(.*?)\],\{(.*)\}$/);
+        username = uname;
+        const songData = songDataStr.split('],[');
+        items = songData.map(processSong);
+    } else {
+        const start = inputData.indexOf('{"UserName":');
+        const end = inputData.indexOf('}]}') + 3;
+        const str = inputData.slice(start, end);
+        let parsed;
+        try { parsed = JSON.parse(str); } catch (e) { parsed = null; }
+        if (!(parsed && parsed.SongRecords)) {
+            return { error: '数据格式无法识别，请检查输入内容' };
+        }
+        username = parsed.UserName;
+        items = parsed.SongRecords.map(processSongFromOldFormat).filter(Boolean);
+    }
+
+    // 按 Reality 降序排序
+    items.sort((a, b) => b.singleRealityRaw - a.singleRealityRaw);
+    return { username, items };
+}
+
+// ---------- 条目工具 ----------
+function tryParseJSON(str) {
+    try { return JSON.parse(str); } catch (e) { return null; }
+}
+
+/* ==================================================================
+   UI 渲染
+   ================================================================== */
+
+// 等级编号 → 文本
+const levelLabels = ['', 'EZ1', 'EZ2', 'EZ3', 'EZ4', 'NR1', 'NR2', 'NR3', 'NR4', 'HD1', 'HD2', 'HD3', 'HD4', 'EX1', 'EX2', 'EX3', 'EX4', 'FC1', 'FC2', 'FC3', 'FC4'];
+const levelClasses = ['', 'lv-ez','lv-ez','lv-ez','lv-ez','lv-nr','lv-nr','lv-nr','lv-nr','lv-hd','lv-hd','lv-hd','lv-hd','lv-ec','lv-ec','lv-ec','lv-ec','lv-fc','lv-fc','lv-fc','lv-fc'];
+
+// 分类对应的主题色
+const categoryColors = {
+    'Theme':     '#7c4dff',
+    'Amethyst':  '#ce93d8',
+    'Sapphire':  '#42a5f5',
+    'Emerald':   '#66bb6a',
+    'Ruby':      '#ef5350'
+};
+const categoryNames = {
+    'Theme': '主题',
+    'Amethyst': '紫晶',
+    'Sapphire': '蓝宝石',
+    'Emerald': '翡翠',
+    'Ruby': '红宝石'
+};
+
+function getRealityClass(r) {
+    const v = parseFloat(r);
+    if (v >= 16) return 'r-gold';
+    if (v >= 14.5) return 'r-green';
+    if (v >= 13) return 'r-blue';
+    if (v >= 11) return 'r-orange';
+    return 'r-gray';
+}
+
+function renderResults(data) {
+    // 显示统计面板
+    const statsBar = document.getElementById('statsBar');
+    statsBar.classList.add('visible');
+    document.getElementById('statUser').textContent = data.username;
+    document.getElementById('statAvg').textContent = data.avgReality;
+    document.getElementById('statTlr').textContent = data.tlrValue;
+
+    // 按分类分组
+    const groups = {};
+    data.items.forEach(item => {
+        const cat = item.category || 'Unknown';
+        if (!groups[cat]) groups[cat] = [];
+        groups[cat].push(item);
+    });
+
+    const container = document.getElementById('resultContent');
+    container.innerHTML = '';
+
+    let rank = 0;
+    const catOrder = ['Theme', 'Amethyst', 'Sapphire', 'Emerald', 'Ruby'];
+    for (const cat of catOrder) {
+        if (!groups[cat]) continue;
+        const items = groups[cat];
+        const color = categoryColors[cat] || 'var(--rain-sky)';
+
+        // 分类标题
+        const header = document.createElement('div');
+        header.className = 'glass category-header';
+        header.style.borderLeftColor = color;
+        header.innerHTML = `
+            <span class="cat-dot" style="background:${color};box-shadow:0 0 8px ${color}44;"></span>
+            <span class="cat-name">${categoryNames[cat] || cat}</span>
+            <span class="cat-count">${items.length} 首</span>
+        `;
+        container.appendChild(header);
+
+        // 歌曲行
+        items.forEach(item => {
+            rank++;
+            const rClass = getRealityClass(item.singleReality);
+            const lvClass = levelClasses[item.bestLevel] || '';
+            const lvLabel = levelLabels[item.bestLevel] || '';
+            const rankClass = rank <= 3 ? `top3 r${rank}` : '';
+
+            const row = document.createElement('div');
+            row.className = 'song-row';
+            row.innerHTML = `
+                <span class="song-rank ${rankClass}">#${rank}</span>
+                <span class="song-name" title="${item.name}">${item.name}</span>
+                <span class="song-const">${item.constant.toFixed(1)}</span>
+                <span class="song-score">${item.bestScore.toLocaleString()}</span>
+                <span class="song-acc">${item.bestAccuracy}</span>
+                <span class="song-level"><span class="lv-badge ${lvClass}">${lvLabel}</span></span>
+                <span class="song-reality ${rClass}">${item.singleReality}</span>
+            `;
+            container.appendChild(row);
+        });
+    }
+
+    // 显示结果区域，隐藏空状态
+    document.getElementById('results').classList.add('visible');
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('fileStatus').textContent = `${data.items.length} 首曲目`;
+}
+
+function clearResults() {
+    document.getElementById('inputData').value = '';
+    document.getElementById('resultContent').innerHTML = '';
+    document.getElementById('results').classList.remove('visible');
+    document.getElementById('statsBar').classList.remove('visible');
+    document.getElementById('emptyState').style.display = 'block';
+    document.getElementById('statUser').textContent = '—';
+    document.getElementById('statAvg').textContent = '—';
+    document.getElementById('statTlr').textContent = '—';
+    document.getElementById('fileStatus').textContent = '';
+}
+
+/* ==================================================================
+   文件导入
+   ================================================================== */
+document.getElementById('fileInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    document.getElementById('fileStatus').textContent = '读取中...';
+
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+        const content = ev.target.result;
+        const name = file.name;
+
+        if (name.endsWith('.json') || name.endsWith('.txt') || name.endsWith('.db')) {
+            // JSON / 文本数据
+            const extracted = extractJSON(content);
+            if (extracted) {
+                document.getElementById('inputData').value = extracted;
+                document.getElementById('fileStatus').textContent = '文件就绪 ✓';
+                // 自动解析
+                startProcess();
+            } else {
+                document.getElementById('inputData').value = content;
+                document.getElementById('fileStatus').textContent = '文件已载入，请手动解析';
             }
+        } else if (name.endsWith('.xml')) {
+            const doc = new DOMParser().parseFromString(content, 'application/xml');
+            const pf = doc.querySelector('string[name="PlayerFile"]');
+            if (pf && pf.textContent) {
+                document.getElementById('inputData').value = decodeURIComponent(pf.textContent);
+                document.getElementById('fileStatus').textContent = 'XML 解析完成 ✓';
+                startProcess();
+            } else {
+                document.getElementById('fileStatus').textContent = 'XML 格式无法识别';
+            }
+        } else if (name.endsWith('.reg')) {
+            const match = content.match(/"PlayerFile_h\d+"\s*=\s*hex:((?:[0-9a-fA-F]{2},?[\\\n\s]*)+)/);
+            if (match) {
+                const decoded = match[1].replace(/[,\\\s\n]/g, '').match(/.{2}/g).map(b => String.fromCharCode(parseInt(b, 16))).join('');
+                document.getElementById('inputData').value = decoded;
+                document.getElementById('fileStatus').textContent = '.reg 解析完成 ✓';
+                startProcess();
+            } else {
+                document.getElementById('fileStatus').textContent = '.reg 格式无法识别';
+            }
+        } else if (name.endsWith('.png')) {
+            const udMatch = content.match(/userdata:([\s\S]+)/);
+            if (udMatch) {
+                document.getElementById('inputData').value = udMatch[1].trim();
+                document.getElementById('fileStatus').textContent = 'PNG 数据提取完成 ✓';
+                startProcess();
+            } else {
+                document.getElementById('fileStatus').textContent = 'PNG 中未找到 userdata';
+            }
+        } else {
+            document.getElementById('fileStatus').textContent = '不支持的文件类型';
         }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+});
 
-        function initUpload() {
-            var dt = document.getElementById("inputData").value;
-            document.getElementById("upload_data").innerHTML = dt;
-            document.getElementById("upload_info").innerHTML = document.getElementById("userInfo").innerHTML;
-            document.getElementById("upload_data_display").innerHTML = dt.substr(0, Math.min(dt.length, 32)) + "...";
-        }
+function extractJSON(str) {
+    const start = str.indexOf('{"UserName":');
+    const end = str.indexOf(']}]', start);
+    return (start !== -1 && end !== -1) ? str.slice(start, end + 3) + '}' : null;
+}
 
-        document.getElementById("upload_btn").onclick = function () {
-            var dt = document.getElementById("upload_data").innerHTML;
-            var title = document.getElementById("upload_title").value;
-            var desc = document.getElementById("upload_description").value;
-            var info = document.getElementById("upload_info").innerHTML;
-            var token = getStorage("token");
-            var username = getStorage("username");
-            var loadingDiv = document.getElementById("uploadPanel-t");
-            var normalDiv = document.getElementById("uploadPanel-normal");
-            var lplt2 = document.getElementById("uploadPanel-t-text");
-            if (!dt || !title || !desc || !info) {
-                layer.msg("Please fill in all the fields / 请填写所有字段");
+/* ==================================================================
+   主流程入口
+   ================================================================== */
+function startProcess() {
+    const textarea = document.getElementById('inputData');
+    const raw = textarea.value.trim();
+    if (!raw) {
+        document.getElementById('fileStatus').textContent = '⚠ 请先输入数据';
+        return;
+    }
+
+    // 按钮状态
+    const btn = document.getElementById('parseBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>解析中...';
+
+    setTimeout(() => {
+        try {
+            const result = processData(raw);
+            if (result.error) {
+                document.getElementById('fileStatus').textContent = '⚠ ' + result.error;
+                btn.disabled = false;
+                btn.innerHTML = '▶ 解析';
                 return;
             }
-            if (title.length > 1024) { layer.msg("Title is too long / 标题过长"); return; }
-            if (desc.length > 2048) { layer.msg("Description is too long / 描述过长"); return; }
-            var loading = layer.load(1);
-            try {
-                loadingDiv.style.display = "block";
-                normalDiv.style.display = "none";
-                lplt2.innerHTML = "Uploading... / 正在上传...";
-                fetch("user/postSave.php", {
-                    method: "POST",
-                    body: new URLSearchParams({ data: dt, title, description: desc, score: info, username, token })
-                }).then(r => r.json()).then(data => {
-                    layer.msg(data.msg);
-                    if (data.code === 0) closeUploadPanel();
-                    loadingDiv.style.display = "none";
-                    normalDiv.style.display = "block";
-                    layer.close(loading);
-                });
-            } catch (e) {
-                layer.msg("An error occurred / 发生错误");
-                loadingDiv.style.display = "none";
-                layer.close(loading);
-                normalDiv.style.display = "block";
+
+            const items = result.items;
+            if (items.length === 0) {
+                document.getElementById('fileStatus').textContent = '⚠ 未解析到有效数据';
+                btn.disabled = false;
+                btn.innerHTML = '▶ 解析';
+                return;
             }
-        };
 
-        function reg_user() {
-            var username = document.getElementById("login_username").value;
-            var password = document.getElementById("login_password").value;
-            if (!username || !password) return;
-            if (username.length > 48) { layer.msg("用户名过长"); return; }
-            if (password.length > 128) { layer.msg("密码过长"); return; }
-            if (password.length < 8) { layer.msg("密码过短"); return; }
-            if (username.length < 6) { layer.msg("用户名过短"); return; }
-            layer.prompt({ title: '重复密码：', formType: 1, shade: 0.6 }, function (text, index) {
-                if (text !== password) { layer.msg("两次密码不一致"); return; }
-                var loading = layer.load(1);
-                try {
-                    fetch("user/reg.php", {
-                        method: "POST",
-                        body: new URLSearchParams({ username, password })
-                    }).then(r => r.json()).then(data => {
-                        layer.msg(data.msg);
-                        if (data.code === 0) {
-                            setStorage("token", data.token);
-                            setStorage("username", data.username);
-                            setStorage("nickname", data.nickname);
-                            initLogging();
-                        }
-                        layer.close(loading);
-                        layer.close(index);
-                    });
-                } catch (e) {
-                    layer.msg("An error occurred / 发生未知错误");
-                    layer.close(loading);
-                    layer.close(index);
-                } finally { closeLogin(); }
+            // 计算平均值 (B20)
+            const b20Items = items.filter(i => i.singleRealityRaw > 0).slice(0, 20);
+            const avgRaw = b20Items.length > 0
+                ? (b20Items.reduce((acc, i) => acc + i.singleRealityRaw, 0) / b20Items.length)
+                : 0;
+            const avgReality = Math.floor(avgRaw * 10000) / 10000;
+
+            // 计算 TRL
+            const tlrValue = tlr(items);
+            const tlrFormatted = tlrValue ? tlrValue.toFixed(4) : '0.0000';
+
+            // 格式化输入框
+            const formatted = '[' + result.username + '],{\n  ' +
+                items.map(i => `[${i.name},${i.category},${i.constant},${i.bestScore},${i.bestAccuracy},${i.bestLevel}]`).join(',\n  ') +
+                '\n}';
+            textarea.value = formatted;
+
+            // 渲染
+            renderResults({
+                username: result.username,
+                avgReality: avgReality.toFixed(4),
+                tlrValue: tlrFormatted,
+                items: items
             });
+
+            document.getElementById('fileStatus').textContent = `✅ ${items.length} 首曲目 · B20 ${avgReality.toFixed(4)}`;
+        } catch (e) {
+            document.getElementById('fileStatus').textContent = '⚠ 解析出错: ' + e.message;
         }
 
-        // Check JS versions
-        checkVersions();
+        btn.disabled = false;
+        btn.innerHTML = '▶ 解析';
+    }, 100);
+}
 
-        // Important Notice
-        var importantNoticeContent = `<div style="line-height:3.6em">
-<span style="font-size:3.6em;color:#000;background-color:#fff"><b>请仔细阅读后再使用！！！(显示不全可往下滑)</b></span>
-<br><hr>
-<span style="font-size:1.6em;"><b><span style="font-size:1.8em;color:#fff;">我们不是Milthm官方</span>，也和Milthm官方无关。有任何问题包括存档不小心搞别地方去了<span style="font-size:1.8em;color:#fff;">不要找官方</span>！找查分器相关人员，本站有群号！</b></span><br>
-<span style="font-size:1.6em;"><b>导入存档前的操作是<span style="font-size:1.8em;color:#fff;">复制</span>存档到你知道的地方，不是剪切不是移动！是<span style="font-size:1.8em;color:#fff;">复制</span>！</b></span><br>
-<span style="font-size:1.6em;"><b>使用前必须<span style="font-size:1.8em;color:#fff;">看文档并规范操作</span>！乱点乱搞存档(比如剪切、乱改名)都极大可能会造成<span style="font-size:1.8em;color:#fff;">永久损失且找谁也没用！</span></b></span>
-</div>`;
+/* ==================================================================
+   雨幕动画
+   ================================================================== */
+(function initRain() {
+    const canvas = document.getElementById('rainCanvas');
+    const count = 40;
+    const drops = [];
 
-        if (getCookie("importantNoticeRead") !== "true") {
-            openIN();
-        }
-        function openIN() {
-            layer.open({
-                title: '使用必读 / Important Notice',
-                content: importantNoticeContent,
-                btn: ['确定并半天不再提示'],
-                yes: function (index) {
-                    setCookie("importantNoticeRead", "true", 0.5);
-                    layer.close(index);
-                },
-                resize: true,
-                maxmin: true,
-                scrollbar: false,
-                anim: 2
-            });
-        }
-    </script>
-
-    <!-- Structured data -->
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebApplication",
-      "name": "Milthm音游查分器",
-      "description": "计算Reality分数的公益音游工具",
-      "applicationCategory": "Game Tool",
-      "operatingSystem": "Web",
-      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-      "author": { "@type": "Organization", "name": "MkziAndInetPigman" }
+    for (let i = 0; i < count; i++) {
+        const drop = document.createElement('div');
+        drop.className = 'raindrop';
+        const dur = 0.8 + Math.random() * 1.5;
+        drop.style.left = Math.random() * 100 + '%';
+        drop.style.animationDuration = dur + 's';
+        drop.style.animationDelay = Math.random() * 2 + 's';
+        drop.style.height = (30 + Math.random() * 50) + 'px';
+        drop.style.opacity = '0.3';
+        canvas.appendChild(drop);
+        drops.push(drop);
     }
-    </script>
 
+    // 定期补充雨滴维持数量
+    setInterval(() => {
+        const existing = canvas.querySelectorAll('.raindrop');
+        if (existing.length < count) {
+            const drop = document.createElement('div');
+            drop.className = 'raindrop';
+            const dur = 0.8 + Math.random() * 1.5;
+            drop.style.left = Math.random() * 100 + '%';
+            drop.style.animationDuration = dur + 's';
+            drop.style.animationDelay = '0s';
+            drop.style.height = (30 + Math.random() * 50) + 'px';
+            canvas.appendChild(drop);
+            setTimeout(() => { if (drop.parentNode) drop.remove(); }, (dur + 1) * 1000);
+        }
+    }, 3000);
+})();
+
+/* ==================================================================
+   快捷键
+   ================================================================== */
+document.addEventListener('keydown', function(e) {
+    // Ctrl+Enter 解析
+    if (e.ctrlKey && e.key === 'Enter') {
+        e.preventDefault();
+        startProcess();
+    }
+    // Ctrl+Shift+C 清除
+    if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+        e.preventDefault();
+        clearResults();
+    }
+});
+
+console.log('%c Milthm 查分器 · 雨之韵律 ', 'font-size:18px;font-weight:bold;color:#8ec5fc;');
+console.log('%c 核心算法已就绪', 'font-size:12px;color:#29a8b9;');
+</script>
 </body>
 </html>
