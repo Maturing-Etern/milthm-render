@@ -1151,6 +1151,21 @@ function exportImage() {
         overlay.classList.remove('active');
         return;
     }
+
+    // 预加载主题字体，确保 Canvas 中可用
+    const fontRegular = new FontFace('milFont',     'url(../rain player/Fonts/milfont.ttf)');
+    const fontBold    = new FontFace('milFontBold', 'url(../rain player/Fonts/milfont_bold.ttf)');
+    Promise.all([fontRegular.load(), fontBold.load()]).then(([fr, fb]) => {
+        document.fonts.add(fr);
+        document.fonts.add(fb);
+        _doExport(data, overlay, statusEl);
+    }).catch(() => {
+        // 字体加载失败时降级为系统字体，直接继续
+        _doExport(data, overlay, statusEl);
+    });
+}
+
+function _doExport(data, overlay, statusEl) {
     const items = data.items;
     const cardCount = items.length;
     const actualCardCount = Math.min(cardCount, items.length);
@@ -1181,15 +1196,15 @@ function exportImage() {
         ctx.lineTo(650, 50);
         ctx.stroke();
         // 标题
-        ctx.font = '50px Arial';
+        ctx.font = '50px milFontBold';
         ctx.fillStyle = '#ffffff';
         ctx.fillText('Milthm-calculator', 100, 130);
-        ctx.font = '30px Arial';
+        ctx.font = '30px milFont';
         ctx.fillText('http://mhtlim.top/', 100, 180);
-        ctx.font = '20px Arial';
+        ctx.font = '20px milFont';
         ctx.fillText('Updated: 2026-05-09', 100, 210);
         // 玩家信息
-        ctx.font = '25px Arial';
+        ctx.font = '25px milFontBold';
         ctx.fillStyle = '#ffffff';
         ctx.fillText(`Player: ${data.username}`, 660, 100);
         ctx.fillText(`Reality: ${data.avgReality}`, 660, 135);
@@ -1211,7 +1226,7 @@ function exportImage() {
                 ctx.fillStyle = 'rgba(128,128,128,.4)';
                 ctx.fillRect(x, y, cardW, cardH);
                 // 排名号
-                ctx.font = '17px Arial';
+                ctx.font = '17px milFont';
                 ctx.textAlign = 'right';
                 ctx.textBaseline = 'top';
                 ctx.fillStyle = i < 20 ? '#FAFAFA' : '#C9C9C9';
@@ -1229,17 +1244,17 @@ function exportImage() {
                 } else {
                     ctx.fillStyle = '#FFFFFF';
                 }
-                ctx.font = '39px Arial';
+                ctx.font = '39px milFontBold';
                 ctx.textAlign = 'left';
                 ctx.fillText(scoreStr, x + 208, y + 52);
                 // 歌名（自动缩字）
                 let f = 25;
-                ctx.font = `${f}px Arial`;
-                while (ctx.measureText(it.name).width > 200 && f > 10) { ctx.font = `${--f}px Arial`; }
+                ctx.font = `${f}px milFontBold`;
+                while (ctx.measureText(it.name).width > 200 && f > 10) { ctx.font = `${--f}px milFontBold`; }
                 ctx.fillStyle = '#FFF';
                 ctx.fillText(it.name, x + 212, y + 23);
                 // 分类/定数/Reality/准确率
-                ctx.font = '20px Arial';
+                ctx.font = '20px milFont';
                 const acc = `${(it.bestAccuracy * 100).toFixed(2)}%`;
                 ctx.fillText(`${it.category} ${parseFloat(it.constant).toFixed(1)} > ${it.singleReality}   ${acc}`, x + 208, y + 98);
                 // 曲绘
