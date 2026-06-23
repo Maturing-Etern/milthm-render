@@ -510,6 +510,18 @@ void main() {
 
         let isTouchDevice = false;
 
+        // 将视口坐标 (clientX, clientY) 转换为 Canvas 内部坐标系
+        // Canvas 的 CSS 显示尺寸可能与 buffer 尺寸不同（缩放），需要做比例换算
+        const toCanvasCoords = (clientX, clientY) => {
+            const rect = this._canvas.getBoundingClientRect();
+            const scaleX = this._canvas.width / rect.width;
+            const scaleY = this._canvas.height / rect.height;
+            return {
+                x: (clientX - rect.left) * scaleX,
+                y: (clientY - rect.top) * scaleY,
+            };
+        };
+
         this._canvas.addEventListener("keydown", e => {
             if (!this._currentAudioSource) return;
             if (e.repeat) return;
@@ -528,7 +540,8 @@ void main() {
             if (!this._currentAudioSource) return;
             const t = this.get_chart_time();
             const touch = e.changedTouches[0];
-            this.#call_wasm("h5bind_judgement_touchstart", this._ctx, t, BigInt(touch.identifier), touch.clientX, touch.clientY);
+            const pos = toCanvasCoords(touch.clientX, touch.clientY);
+            this.#call_wasm("h5bind_judgement_touchstart", this._ctx, t, BigInt(touch.identifier), pos.x, pos.y);
         });
 
         this._canvas.addEventListener("touchmove", e => {
@@ -536,7 +549,8 @@ void main() {
             if (!this._currentAudioSource) return;
             const t = this.get_chart_time();
             const touch = e.changedTouches[0];
-            this.#call_wasm("h5bind_judgement_touchmove", this._ctx, t, BigInt(touch.identifier), touch.clientX, touch.clientY);
+            const pos = toCanvasCoords(touch.clientX, touch.clientY);
+            this.#call_wasm("h5bind_judgement_touchmove", this._ctx, t, BigInt(touch.identifier), pos.x, pos.y);
         });
 
         this._canvas.addEventListener("touchend", e => {
@@ -551,7 +565,8 @@ void main() {
             if (!this._currentAudioSource) return;
             if (isTouchDevice) return;
             const t = this.get_chart_time();
-            this.#call_wasm("h5bind_judgement_touchstart", this._ctx, t, BigInt(2000 + e.button), e.clientX, e.clientY);
+            const pos = toCanvasCoords(e.clientX, e.clientY);
+            this.#call_wasm("h5bind_judgement_touchstart", this._ctx, t, BigInt(2000 + e.button), pos.x, pos.y);
         });
 
         this._canvas.addEventListener("mousemove", e => {
@@ -559,7 +574,8 @@ void main() {
             if (isTouchDevice) return;
             if (e.buttons <= 0) return;
             const t = this.get_chart_time();
-            this.#call_wasm("h5bind_judgement_touchmove", this._ctx, t, BigInt(2000 + e.button), e.clientX, e.clientY);
+            const pos = toCanvasCoords(e.clientX, e.clientY);
+            this.#call_wasm("h5bind_judgement_touchmove", this._ctx, t, BigInt(2000 + e.button), pos.x, pos.y);
         });
 
         this._canvas.addEventListener("mouseup", e => {
@@ -973,23 +989,7 @@ void main() {
         try {
             const source = this._audioCtx.createBufferSource();
             source.buffer = clip;
-            // drag 音效原始音量极低（-25.7dB），需要增益放大到与 hit（-13.7dB）相当
-            if (key.includes("drag")) {
-                // 确保音频上下文已恢复
-                if (this._audioCtx.state === 'suspended') {
-                    this._audioCtx.resume().then(() => {
-                    }).catch(e => {
-                    });
-                }
-                const gainNode = this._audioCtx.createGain();
-                // 计算: 目标补偿 12dB (-25.7dB → -13.7dB), 增益倍数 = 10^(12/20) ≈ 3.98
-                // 原值 3.5 ≈ +10.9dB 补偿，可能仍偏小；调整为 4.5 ≈ +13.1dB 补偿
-                gainNode.gain.value = 4.5; // ≈ +13.1dB 补偿
-                source.connect(gainNode);
-                gainNode.connect(this._audioCtx.destination);
-            } else {
-                source.connect(this._audioCtx.destination);
-            }
+            source.connect(this._audioCtx.destination);
             source.start(0);
         } catch (e) {
             console.error(`[Hitsound] ❌ 播放失败: key=${key}, error=${e.message}`);

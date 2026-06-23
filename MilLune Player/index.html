@@ -22,7 +22,7 @@
         <div class="controls">
             <label class="upload-btn">
                 📁 选择谱面
-                <input type="file" id="file-input" accept=".zip,.json">
+                <input type="file" id="file-input" accept=".zip,.json,.txt,.xml,.reg,.db,.png">
             </label>
             <span id="fileName" class="file-info">未选择文件</span>
 
@@ -67,7 +67,7 @@
             <div id="initialPrompt" style="text-align: center; color: rgba(44,62,80,0.45);padding: 2rem;">
                 <div style="font-size: 3rem; margin-bottom: 1rem;">🎵</div>
                 <p style="font-size: 1.05rem;font-weight:500;color:#2c3e50;">选择 Milthm 谱面文件开始游玩</p>
-                <p style="font-size: 0.8rem; margin-top: 0.5rem;color:rgba(0,0,0,0.45);">支持 .zip / .json 格式</p>
+                <p style="font-size: 0.8rem; margin-top: 0.5rem;color:rgba(0,0,0,0.45);">支持 .zip / .json / .txt / .xml / .reg / .db / .png</p>
             </div>
         </div>
     </div>
@@ -83,11 +83,11 @@
 <div id="infoModal" class="modal">
     <div class="modal-content">
         <h3>📋 谱面格式要求</h3>
-        <p>MilLune Player 需要 <strong>Milthm 标准格式</strong> 的谱面包。</p>
+        <p>MilLune Player 支持 <strong>Milthm 标准格式</strong> 的谱面包。</p>
         <p>ZIP 文件必须包含：</p>
-        <p>• <code>meta.json</code> - 谱面元数据</p>
+        <p>• <code>meta.json</code> - 谱面元数据（或 <code>info.json</code>）</p>
         <p>• <code>music.ogg</code> 或 <code>music.mp3</code> - 音频文件</p>
-        <p>• <code>chart/*.json</code> - 谱面数据</p>
+        <p>• <code>chart/*.json</code> / <code>*.txt</code> / <code>*.xml</code> / <code>*.reg</code> / <code>*.db</code> / <code>*.png</code> - 谱面数据</p>
         <p style="margin-top: 1rem;">💡 提示：使用 Rain Editor 导出谱面</p>
         <button class="modal-close" id="closeModal">明白了</button>
     </div>
@@ -691,36 +691,41 @@
                 };
 
                 const chartBlob = await getZipFile(meta.chart_file).async("blob");
-                // 读取主JSON的谱面信息
-                const chartText = await getZipFile(meta.chart_file).async("string");
-                const chartJson = JSON.parse(chartText);
-                // 谱面信息在 meta 对象中，如果存在则使用，否则回退到整个 JSON
-                state.chartInfo = chartJson.meta || chartJson;
-                // 计算总物量（可击打音符数量）
-                let totalNotes = 0;
-                if (Array.isArray(chartJson)) {
-                    totalNotes = chartJson.filter(item => item && item.type === 0).length;
-                } else if (chartJson.events && Array.isArray(chartJson.events)) {
-                    totalNotes = chartJson.events.filter(item => item && item.type === 0).length;
-                } else {
-                    // 尝试遍历所有顶级属性，查找数组
-                    for (const key in chartJson) {
-                        if (Array.isArray(chartJson[key])) {
-                            const arr = chartJson[key];
-                            // 假设第一个元素有type字段
-                            if (arr.length > 0 && arr[0].type !== undefined) {
-                                totalNotes = arr.filter(item => item && item.type === 0).length;
-                                break;
+                // 尝试读取谱面元数据（兼容 JSON 和非 JSON 格式）
+                // 非 JSON 谱面（.xml/.txt/.reg/.db/.png）解析会失败，但不影响加载
+                try {
+                    const chartText = await getZipFile(meta.chart_file).async("string");
+                    const chartJson = JSON.parse(chartText);
+                    state.chartInfo = chartJson.meta || chartJson;
+                    let totalNotes = 0;
+                    if (Array.isArray(chartJson)) {
+                        totalNotes = chartJson.filter(item => item && item.type === 0).length;
+                    } else if (chartJson.events && Array.isArray(chartJson.events)) {
+                        totalNotes = chartJson.events.filter(item => item && item.type === 0).length;
+                    } else {
+                        for (const key in chartJson) {
+                            if (Array.isArray(chartJson[key])) {
+                                const arr = chartJson[key];
+                                if (arr.length > 0 && arr[0].type !== undefined) {
+                                    totalNotes = arr.filter(item => item && item.type === 0).length;
+                                    break;
+                                }
                             }
                         }
                     }
+                    state.chartInfo.totalNotes = totalNotes;
+                } catch (e) {
+                    // 非 JSON 谱面格式：跳过元数据提取，谱面仍可正常加载
+                    state.chartInfo = {};
                 }
-                state.chartInfo.totalNotes = totalNotes;
 
                 const audioBlob = meta.audio_file ? await getZipFile(meta.audio_file).async("blob") : null;
                 const illuBlob = meta.image_file ? await getZipFile(meta.image_file).async("blob") : null;
 
-                state.chartFile = new File([chartBlob], meta.chart_file, {type: "application/json"});
+                // 根据文件扩展名确定 MIME 类型
+                const chartExt = meta.chart_file.slice(meta.chart_file.lastIndexOf('.')).toLowerCase();
+                const mimeMap = { '.json':'application/json','.txt':'text/plain','.xml':'text/xml','.db':'application/octet-stream','.png':'image/png','.reg':'text/plain' };
+                state.chartFile = new File([chartBlob], meta.chart_file, {type: mimeMap[chartExt] || 'application/octet-stream'});
                 state.audioFile = audioBlob ? new File([audioBlob], meta.audio_file, {type: "audio/mpeg"}) : null;
                 state.illuFile = illuBlob ? new File([illuBlob], meta.image_file, {type: "image/png"}) : null;
                 state.zipType = 'meta';
@@ -773,7 +778,11 @@
                 const audioBlob = audioZipFile ? await audioZipFile.async("blob") : null;
                 const illuBlob = illuZipFile ? await illuZipFile.async("blob") : null;
 
-                state.chartFile = new File([chartBlob], "beatmap.json", {type: "application/json"});
+                // 根据 FileMap.beatmap 的实际文件名和扩展名构建 File
+                const chartName = fileMap.beatmap.split('/').pop() || 'beatmap.unknown';
+                const chartExt = chartName.slice(chartName.lastIndexOf('.')).toLowerCase();
+                const mimeMapInfo = { '.json':'application/json','.txt':'text/plain','.xml':'text/xml','.db':'application/octet-stream','.png':'image/png','.reg':'text/plain' };
+                state.chartFile = new File([chartBlob], chartName, {type: mimeMapInfo[chartExt] || 'application/octet-stream'});
                 state.audioFile = audioBlob ? new File([audioBlob], "song.ogg", {type: "audio/ogg"}) : null;
                 state.illuFile = illuBlob ? new File([illuBlob], "illu.png", {type: "image/png"}) : null;
 
@@ -1355,6 +1364,41 @@
         // 清理雨滴
         const drops = document.getElementById('rainDrops');
         if (drops) drops.innerHTML = '';
+
+        // 停止并销毁播放器实例
+        if (state.playerInstance) {
+            if (typeof state.playerInstance.stop === 'function') {
+                state.playerInstance.stop();
+            }
+            if (state.playerInstance.destroy) {
+                state.playerInstance.destroy();
+            }
+            state.playerInstance = null;
+        }
+
+        // 隐藏画布，恢复初始提示
+        els.canvas.style.display = 'none';
+        els.initialPrompt.style.display = 'block';
+
+        // 清理加载遮罩
+        els.loading.style.display = 'none';
+
+        // 重置结算相关状态
+        state.autoResultShown = false;
+        state.completionStats = null;
+
+        // 移除 resize 监听
+        window.removeEventListener('resize', resizeGameCanvas);
+
+        // 退出全屏
+        if (document.fullscreenElement) {
+            document.exitFullscreen();
+        }
+
+        // 退出剧场模式
+        if (isTheaterMode) {
+            toggleTheaterMode();
+        }
     }
 
     // 按钮绑定

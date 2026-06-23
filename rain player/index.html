@@ -637,10 +637,13 @@
         function autoFullscreenIframe(iframe) {
             if (!iframe) return;
             const style = document.createElement('style');
+            // 不使用 position:absolute + transform 居中 canvas，否则 WebGL 内部的鼠标/触摸坐标
+            // 仍会基于 iframe 原始坐标系计算，导致与 canvas 视觉位置不符（移动时位置错乱）。
+            // 改用 flex 居中：canvas 保持在文档流中，WebGL 坐标与视觉位置完全一致。
             style.textContent = `
-                html,body{margin:0!important;padding:0!important;overflow:hidden!important;width:100%!important;height:100%!important;position:relative!important}
-                #unity-container{width:100%!important;height:100%!important;position:relative!important}
-                canvas{max-width:100%!important;max-height:100%!important;display:block!important;position:absolute!important;top:50%!important;left:50%!important;transform:translate(-50%,-50%)!important}
+                html,body{margin:0!important;padding:0!important;overflow:hidden!important;width:100%!important;height:100%!important;display:flex!important;align-items:center!important;justify-content:center!important;}
+                #unity-container{width:100%!important;height:100%!important;display:flex!important;align-items:center!important;justify-content:center!important;}
+                canvas{max-width:100%!important;max-height:100%!important;display:block!important;}
             `;
             try { if (iframe.contentDocument) iframe.contentDocument.head.appendChild(style); }
             catch(e) { console.log("无法注入样式（跨域）"); }
