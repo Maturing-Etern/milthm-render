@@ -309,6 +309,172 @@
             letter-spacing: 0.1em;
         }
 
+        /* 更新日志按钮 */
+        .changelog-trigger {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-top: 0.8rem;
+            padding: 0.35rem 1rem;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            color: rgba(142, 197, 252, 0.5);
+            border: 1px solid rgba(142, 197, 252, 0.15);
+            background: rgba(142, 197, 252, 0.05);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            letter-spacing: 0.08em;
+        }
+        .changelog-trigger:hover {
+            color: rgba(142, 197, 252, 0.8);
+            border-color: rgba(142, 197, 252, 0.35);
+            background: rgba(142, 197, 252, 0.1);
+            box-shadow: 0 0 20px rgba(142, 197, 252, 0.08);
+        }
+
+        /* 更新日志弹窗遮罩 */
+        .changelog-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.35s ease;
+        }
+        .changelog-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* 弹窗主体 */
+        .changelog-modal {
+            width: min(640px, 92vw);
+            max-height: 80vh;
+            border-radius: var(--radius-xl);
+            background: rgba(15, 23, 42, 0.95);
+            border: 1.5px solid rgba(142, 197, 252, 0.2);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transform: translateY(20px) scale(0.97);
+            transition: transform 0.35s ease;
+        }
+        .changelog-overlay.open .changelog-modal {
+            transform: translateY(0) scale(1);
+        }
+
+        /* 弹窗头部 */
+        .changelog-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.2rem 1.5rem;
+            border-bottom: 1px solid rgba(142, 197, 252, 0.1);
+        }
+        .changelog-header h2 {
+            font-family: var(--font-bold), sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 0.05em;
+        }
+        .changelog-header .cl-date {
+            font-size: 0.72rem;
+            color: rgba(142, 197, 252, 0.5);
+            margin-left: 0.8rem;
+        }
+        .changelog-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.04);
+            color: rgba(255,255,255,0.5);
+            font-size: 1.1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.25s ease;
+        }
+        .changelog-close:hover {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+
+        /* 弹窗内容区 */
+        .changelog-body {
+            padding: 1.5rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .changelog-body::-webkit-scrollbar { width: 4px; }
+        .changelog-body::-webkit-scrollbar-track { background: transparent; }
+        .changelog-body::-webkit-scrollbar-thumb { background: rgba(142,197,252,0.2); border-radius: 4px; }
+
+        /* 版本块 */
+        .cl-version {
+            margin-bottom: 1.5rem;
+        }
+        .cl-version:last-child {
+            margin-bottom: 0;
+        }
+        .cl-version-title {
+            font-family: var(--font-bold), sans-serif;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--rain-sky);
+            margin-bottom: 0.6rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .cl-version-title::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 16px;
+            border-radius: 2px;
+            background: linear-gradient(180deg, var(--rain-sky), rgba(142,197,252,0.2));
+            margin-right: 0.5rem;
+            vertical-align: middle;
+        }
+
+        /* 更新条目 */
+        .cl-section-label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            margin: 0.8rem 0 0.35rem;
+            padding-left: 0.5rem;
+            border-left: 2px solid rgba(142,197,252,0.3);
+        }
+        .cl-section-label.fix  { color: #f87171; border-color: rgba(248,113,113,0.4); }
+        .cl-section-label.tune { color: #fbbf24; border-color: rgba(251,191,36,0.4); }
+        .cl-section-label.new  { color: #34d399; border-color: rgba(52,211,153,0.4); }
+
+        .cl-item {
+            font-size: 0.82rem;
+            color: rgba(255,255,255,0.65);
+            line-height: 1.7;
+            padding: 0.15rem 0 0.15rem 0.8rem;
+            position: relative;
+        }
+        .cl-item::before {
+            content: '·';
+            position: absolute;
+            left: 0;
+            color: rgba(142,197,252,0.4);
+        }
+
         /* 分隔线 "OR" */
         .gw-divider {
             display: flex;
@@ -436,11 +602,86 @@
     <!-- 底部 -->
     <div class="gateway-footer">
         <p>MILTHM &copy; 雨之韵律 · 仅供学习交流</p>
+        <button class="changelog-trigger" onclick="openChangelog()">
+            📋 更新日志
+        </button>
     </div>
 
 </div>
 
+<!-- 更新日志弹窗 -->
+<div class="changelog-overlay" id="changelogOverlay">
+    <div class="changelog-modal">
+        <div class="changelog-header">
+            <div style="display:flex;align-items:baseline;gap:0.5rem;">
+                <h2>📋 更新日志</h2>
+                <span class="cl-date">2026-06-23</span>
+            </div>
+            <button class="changelog-close" onclick="closeChangelog()" title="关闭">✕</button>
+        </div>
+        <div class="changelog-body">
+
+            <!-- V2 2026-06-23 -->
+            <div class="cl-version">
+                <div class="cl-version-title">MilLune Player · 2026-06-23</div>
+
+                <div class="cl-section-label fix">🐛 修复</div>
+                <div class="cl-item">谱面格式兼容性：修复仅支持 .json 的问题，完整兼容 6 种格式（.json / .txt / .xml / .reg / .db / .png）</div>
+                <div class="cl-item">触摸/鼠标判定坐标修复：Canvas CSS 缩放时判定点击位置与视觉位置偏移的问题已修正</div>
+                <div class="cl-item">结算面板重置：修复关闭结算面板后播放器仍在后台运行的问题，现已完整重置</div>
+                <div class="cl-item">字体显示修复：MilFont 字体检修，各模块字体显示正常</div>
+                <div class="cl-item">Rain Player：修复 WebGL 模式移动时音符坐标错乱的问题</div>
+
+                <div class="cl-section-label tune">🎵 调整</div>
+                <div class="cl-item">更换打击音文件</div>
+                <div class="cl-item">移除 drag 音效增强相关改动</div>
+            </div>
+
+            <!-- V2 2026-06-11 -->
+            <div class="cl-version">
+                <div class="cl-version-title">MilLune Player · 2026-06-11</div>
+
+                <div class="cl-section-label new">✨ 新增</div>
+                <div class="cl-item">支持从 ZIP 文件加载谱面（自动识别 meta.json / info.json 结构）</div>
+                <div class="cl-item">新增结算面板：游戏结束后自动弹出，显示判定统计与评级</div>
+                <div class="cl-item">新增全屏模式与剧场模式切换</div>
+
+                <div class="cl-section-label fix">🐛 修复</div>
+                <div class="cl-item">修复加载谱面后音符判定位置与视觉位置不一致的问题</div>
+                <div class="cl-item">修复窗口 resize 时 Canvas 未同步缩放的问题</div>
+            </div>
+
+            <!-- V1 Rain Player -->
+            <div class="cl-version">
+                <div class="cl-version-title">Rain Player · V1</div>
+
+                <div class="cl-section-label new">✨ 功能</div>
+                <div class="cl-item">基于 Unity WebGL 的谱面播放器</div>
+                <div class="cl-item">支持多参数调整（速度、音量、偏移等）</div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
 <script>
+    // 更新日志弹窗
+    function openChangelog() {
+        document.getElementById('changelogOverlay').classList.add('open');
+    }
+    function closeChangelog() {
+        document.getElementById('changelogOverlay').classList.remove('open');
+    }
+    // 点击遮罩关闭
+    document.addEventListener('DOMContentLoaded', function() {
+        var overlay = document.getElementById('changelogOverlay');
+        if (overlay) {
+            overlay.addEventListener('click', function(e) {
+                if (e.target === overlay) closeChangelog();
+            });
+        }
+    });
+
     // 生成星空
     (function() {
         const container = document.getElementById('stars');
