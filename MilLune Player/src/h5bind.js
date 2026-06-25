@@ -736,7 +736,7 @@ void main() {
         // 命名规则：hit.ogg = 普通点击(tap/hold等)，drag.OGG = 拖拽(drag/exdrag等)
         try {
             const isDrag = key.includes("drag");
-            const fileName = isDrag ? "drag.OGG" : "hit.ogg";
+            const fileName = isDrag ? "drag.ogg" : "hit.ogg";
             const externalUrl = this._hitsoundPath + "/" + fileName;
             
 
