@@ -517,6 +517,7 @@ body {
             <button class="btn btn-primary" onclick="startProcess()" id="parseBtn">▶ 解析</button>
             <button class="btn btn-outline" onclick="document.getElementById('fileInput').click()">📁 导入文件</button>
             <button class="btn btn-outline" onclick="exportImage()" id="exportBtn" style="display:none">🖼️ 导出图片</button>
+            <button class="btn btn-outline" onclick="exportTrendChart()" id="trendBtn" style="display:none">📈 趋势图</button>
             <input type="file" id="fileInput" accept=".json,.txt,.xml,.reg,.db,.png">
             <span id="fileStatus" style="font-size:0.78rem;color:var(--text-muted);margin-left:auto;"></span>
         </div>
@@ -816,8 +817,10 @@ function clearResults() {
     document.getElementById('statTlr').textContent = '—';
     document.getElementById('fileStatus').textContent = '';
     document.getElementById('exportBtn').style.display = 'none';
+    document.getElementById('trendBtn').style.display = 'none';
     window._exportData = null;
     window._originalInput = null;
+    window._rawScores = null;
 }
 
 /* ==================================================================
@@ -978,6 +981,24 @@ function extractScores(db) {
 }
 
 function processHistoryRecords(scores) {
+    // 先富化 scores 数据（用于趋势图）
+    for (const s of scores) {
+        const co = constants[s.chart_id];
+        if (!co) continue;
+        s.constant = co.constant;
+        s.category = co.category;
+        s.name = co.name;
+        s.singleReality = reality(s.score, co.constant);
+        const acc = (s.score_accuracy || 0) * 100;
+        s.h = (acc < 99 || s.score < 10000 * acc) ? 0 : (co.constant * 0.1 + 1) * Math.pow((s.score - 5000 * acc - 500000) / 10000, 2);
+        if (co.ad) s.d = s.score < 995000 ? 0 : (s.score < 1005000 ? Math.pow((s.score - 995000) / 10000, 2) * co.ad : co.ad);
+        if (co.ae) s.e = s.score < 995000 ? 0 : (s.score < 1005000 ? Math.pow((s.score - 995000) / 10000, 2) * co.ae : co.ae);
+        if (co.af) s.f = s.score < 995000 ? 0 : (s.score < 1005000 ? Math.pow((s.score - 995000) / 10000, 2) * co.af : co.af);
+        if (co.ag) s.g = s.score < 995000 ? 0 : (s.score < 1005000 ? Math.pow((s.score - 995000) / 10000, 2) * co.ag : co.ag);
+    }
+    // 保存富化后的原始数据供趋势图使用
+    window._rawScores = scores.filter(s => s.constant !== undefined);
+
     const items = [];
     for (const s of scores) {
         const co = constants[s.chart_id];
@@ -999,6 +1020,8 @@ function processHistoryRecords(scores) {
         '\n}';
     document.getElementById('inputData').value = formatted;
     document.getElementById('fileStatus').textContent = `data.db 解析完成 (${items.length} 首) ✓`;
+    // 显示趋势图按钮
+    document.getElementById('trendBtn').style.display = 'inline-block';
     startProcess();
 }
 
@@ -1130,6 +1153,246 @@ document.addEventListener('keydown', function(e) {
 
 console.log('%c Milthm 查分器 · 雨之韵律 ', 'font-size:18px;font-weight:bold;color:#8ec5fc;');
 console.log('%c 核心算法已就绪', 'font-size:12px;color:#29a8b9;');
+
+/* ==================================================================
+   趋势图导出 (Canvas 2: Reality 变化趋势 + 雷达图)
+   ================================================================== */
+function formatTimeDiff(timeDiff) {
+    const days = Math.floor(timeDiff / 86400000);
+    if (days > 0) return '-' + days + 'd';
+    const hours = Math.floor((timeDiff % 86400000) / 3600000);
+    if (hours > 0) return '-' + hours + 'h';
+    return '-' + Math.floor((timeDiff % 3600000) / 60000) + 'm';
+}
+
+function calculateUserReality(scores) {
+    const b20Map = new Map();
+    const history = [];
+    let lastReality = null;
+    scores.sort((a, b) => new Date(a.played_at) - new Date(b.played_at));
+    for (const s of scores) {
+        if (!b20Map.has(s.chart_id) || b20Map.get(s.chart_id).score < s.score) {
+            b20Map.set(s.chart_id, s);
+        }
+        const b20 = Array.from(b20Map.values()).sort((a, b) => b.singleReality - a.singleReality).slice(0, 20);
+        const filtered = b20.filter(d => d.singleReality > 0);
+        const ur = filtered.length ? filtered.reduce((sum, d) => sum + d.singleReality, 0) / 20 : 0;
+        if (lastReality === null || ur !== lastReality) {
+            history.push({ userreality: ur, played_at: s.played_at });
+            lastReality = ur;
+        }
+    }
+    return history;
+}
+
+function calculateRecentScores(scores) {
+    const valid = scores.filter(s => s.constant >= 0).sort((a, b) => new Date(a.played_at) - new Date(b.played_at));
+    const r30 = [];
+    const seen = new Set();
+    for (const s of valid) {
+        if (s.score >= 1000000 || !seen.has(s.chart_id) || s.score > r30.filter(r => r.chart_id === s.chart_id).reduce((m, r) => Math.max(m, r.score), 0) || new Set(r30.map(r => r.chart_id)).size <= 10) {
+            if (r30.length >= 30) r30.shift();
+            r30.push(s);
+            seen.add(s.chart_id);
+        }
+    }
+    r30.sort((a, b) => b.singleReality - a.singleReality);
+    const used = new Set();
+    return r30.filter(s => { if (used.has(s.chart_id)) return false; used.add(s.chart_id); return true; }).slice(0, 10);
+}
+
+function drawRadarChart(ctx, data, x, y, w, h) {
+    const labels = ['底力', '手法', '读谱', '多指', '准度'];
+    const maxVal = Math.ceil(Math.max(...data) * 2) / 2;
+    const cx = x + w / 2, cy = y + h / 2, r = Math.min(w, h) / 2;
+    ctx.strokeStyle = '#ccc';
+    for (let i = 0; i < 8; i++) {
+        const sr = (i / 7) * r;
+        ctx.beginPath();
+        for (let j = 0; j < 5; j++) {
+            const a = (Math.PI * 2 / 5) * j - Math.PI / 2;
+            j === 0 ? ctx.moveTo(cx + sr * Math.cos(a), cy + sr * Math.sin(a)) : ctx.lineTo(cx + sr * Math.cos(a), cy + sr * Math.sin(a));
+        }
+        ctx.closePath(); ctx.stroke();
+    }
+    ctx.fillStyle = 'white'; ctx.font = '12px Arial';
+    for (let i = 0; i < 8; i++) {
+        const sv = (i * maxVal / 7).toFixed(1);
+        ctx.fillText(sv, cx, cy - (i / 7) * r);
+    }
+    ctx.beginPath(); ctx.fillStyle = 'rgba(210,244,255,0.5)'; ctx.strokeStyle = '#8ec5fc';
+    data.forEach((v, i) => {
+        const a = (Math.PI * 2 / 5) * i - Math.PI / 2, sr = (v / maxVal) * r;
+        i === 0 ? ctx.moveTo(cx + sr * Math.cos(a), cy + sr * Math.sin(a)) : ctx.lineTo(cx + sr * Math.cos(a), cy + sr * Math.sin(a));
+    });
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'white'; ctx.font = '16px Arial'; ctx.textAlign = 'center';
+    labels.forEach((l, i) => {
+        const a = (Math.PI * 2 / 5) * i - Math.PI / 2;
+        ctx.fillText(l + ': ' + data[i].toFixed(2), cx + (r + 20) * Math.cos(a), cy + (r + 20) * Math.sin(a));
+    });
+}
+
+function exportTrendChart() {
+    const scores = window._rawScores;
+    if (!scores || !scores.length) return alert('⚠ 请先用 .db 文件导入数据');
+
+    const overlay = document.getElementById('exportOverlay');
+    overlay.classList.add('active');
+    const statusEl = document.getElementById('fileStatus');
+
+    setTimeout(() => {
+        try {
+            const history = calculateUserReality(scores);
+            const r10 = calculateRecentScores(scores);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = 2000; canvas.height = 1500;
+            const ctx = canvas.getContext('2d');
+
+            const bgImg = new Image();
+            bgImg.onload = () => {
+                ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+                drawTrendChartContent(ctx, canvas, history, r10, scores);
+            };
+            bgImg.onerror = () => {
+                ctx.fillStyle = '#0a0f18';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                drawTrendChartContent(ctx, canvas, history, r10, scores);
+            };
+            bgImg.src = './jpgs/背景.jpg';
+        } catch (e) {
+            overlay.classList.remove('active');
+            statusEl.textContent = '⚠ 趋势图生成失败: ' + e.message;
+        }
+    }, 100);
+}
+
+function drawTrendChartContent(ctx, canvas, history, r10, scores) {
+    const overlay = document.getElementById('exportOverlay');
+    const statusEl = document.getElementById('fileStatus');
+
+    // 趋势图区域
+    const cx = 1050, cy = 50, cw = 900, ch = 500;
+    const times = history.map(d => new Date(d.played_at).getTime());
+    const reals = history.map(d => d.userreality);
+    const minT = Math.min(...times), maxT = Math.max(...times);
+    const minR = Math.min(...reals), maxR = Math.max(...reals);
+    const sx = t => cx + ((t - minT) / (maxT - minT)) * cw;
+    const sy = r => cy + ch - ((r - minR) / (maxR - minR)) * ch;
+
+    // 网格
+    ctx.strokeStyle = '#444'; ctx.lineWidth = 1;
+    for (let i = 0; i <= 5; i++) {
+        const y = cy + (ch / 5) * i;
+        ctx.beginPath(); ctx.moveTo(cx, y); ctx.lineTo(cx + cw, y); ctx.stroke();
+    }
+    for (let i = 0; i <= 6; i++) {
+        const x = cx + (cw / 6) * i;
+        ctx.beginPath(); ctx.moveTo(x, cy); ctx.lineTo(x, cy + ch); ctx.stroke();
+    }
+
+    // 填充区域 + 折线
+    ctx.fillStyle = 'rgba(206,238,249,0.5)'; ctx.beginPath();
+    ctx.moveTo(sx(times[0]), sy(reals[0]));
+    history.forEach((_, i) => ctx.lineTo(sx(times[i]), sy(reals[i])));
+    ctx.lineTo(sx(times[times.length - 1]), cy + ch);
+    ctx.lineTo(sx(times[0]), cy + ch);
+    ctx.closePath(); ctx.fill();
+
+    ctx.strokeStyle = 'rgba(200,237,249,0.9)'; ctx.lineWidth = 3; ctx.beginPath();
+    history.forEach((_, i) => i === 0 ? ctx.moveTo(sx(times[i]), sy(reals[i])) : ctx.lineTo(sx(times[i]), sy(reals[i])));
+    ctx.stroke();
+
+    // 时间轴
+    ctx.fillStyle = 'white'; ctx.font = '20px Arial'; ctx.textAlign = 'center';
+    const now = Date.now(), totalT = now - minT, interval = totalT / 5;
+    for (let i = 0; i < 5; i++) {
+        const x = cx + (i * cw) / 5;
+        ctx.fillText(formatTimeDiff(now - (minT + i * interval)), x, cy + ch + 30);
+    }
+    ctx.fillText('now', cx + cw, cy + ch + 30);
+
+    // Reality 刻度
+    ctx.textAlign = 'right';
+    for (let i = 0; i < 5; i++) {
+        ctx.fillText((minR + (maxR - minR) * (i / 4)).toFixed(2), cx - 10, sy(minR + (maxR - minR) * (i / 4)));
+    }
+
+    // 标题
+    ctx.textAlign = 'center'; ctx.font = '20px Arial';
+    ctx.fillText('User Reality 变化趋势', cx + cw / 2, cy - 10);
+
+    // 雷达图
+    const enriched = scores.filter(s => s.d !== undefined || s.e !== undefined || s.f !== undefined || s.g !== undefined || s.h !== undefined);
+    if (enriched.length >= 7) {
+        const calc = (key, mult, div) => mult * enriched.map(s => s[key] || 0).sort((a, b) => b - a).slice(0, 7).reduce((s, v) => s + v, 0) / 7 / div;
+        drawRadarChart(ctx, [calc('d', 70, 22.5), calc('e', 70, 30.5), calc('f', 2.5, 1), calc('g', 7, 1), calc('h', 80.5, 15.38)], 1150, 680, 700, 700);
+    }
+
+    // 最近游玩卡片
+    ctx.font = '40px Arial'; ctx.textAlign = 'left';
+    ctx.fillText('最近游玩', 400, 110);
+    ctx.fillText('r10 记录', 400, 760);
+    ctx.font = '20px Arial'; ctx.textAlign = 'right';
+    ctx.fillText('(由Panyi提供计算方式)', 1850, 1380);
+
+    drawMiniCards(ctx, scores.slice(-10).reverse(), 50, 150).then(() => {
+        drawMiniCards(ctx, r10, 50, 800).then(() => {
+            const link = document.createElement('a');
+            const t = new Date().toISOString().replace(/[:\-T]/g, '_').split('.')[0];
+            link.download = 'reality_trend_' + t + '.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            overlay.classList.remove('active');
+            statusEl.textContent = '✅ 趋势图已导出';
+        });
+    });
+}
+
+function drawMiniCards(ctx, items, ox, oy) {
+    const cw = 340, ch = 100, iw = 110, ih = 70, cs = 360, rs = 110;
+    const loadImg = src => new Promise(resolve => { const img = new Image(); img.onload = () => resolve(img); img.onerror = () => { const fb = new Image(); fb.onload = () => resolve(fb); fb.src = './jpgs/NYA.jpg'; }; img.src = src; });
+    const promises = items.map((s, i) => {
+        const x = ox + (i % 2) * cs, y = oy + Math.floor(i / 2) * rs;
+        ctx.fillStyle = 'rgba(104,118,122,0.4)';
+        ctx.fillRect(x, y, cw, ch);
+        ctx.font = '13px Arial'; ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+        ctx.fillStyle = i < 10 ? '#FAFAFA' : '#C9C9C9';
+        ctx.fillText('#' + (i + 1), x + cw - 10, y + 5);
+
+        let scoreClr = '#FFFFFF';
+        if (s.bestLevel !== undefined && s.bestLevel < 3) {
+            const g = ctx.createLinearGradient(x, y + 40, x, y + 70);
+            g.addColorStop(0, '#99C5FB'); g.addColorStop(1, '#D8C3FA'); scoreClr = g;
+        } else if (s.bestLevel !== undefined && s.bestLevel < 5) { scoreClr = '#90CAEF'; }
+        ctx.font = '28px Arial'; ctx.textAlign = 'left'; ctx.fillStyle = scoreClr;
+        ctx.fillText((s.score || s.bestScore).toString().padStart(7, '0'), x + 128, y + 42);
+
+        ctx.font = '15px Arial'; ctx.fillStyle = '#FFF';
+        if (s.score_perfect_count !== undefined) {
+            ctx.fillText('P:' + (s.score_perfect_count + (s.score_exact_count || 0)) + '(+' + (s.score_exact_count || 0) + ')', x + 240, y + 48);
+            ctx.fillText('G:' + (s.score_good_count || 0) + '  L:' + (s.score_bad_count || 0) + '/' + (s.score_miss_count || 0), x + 240, y + 68);
+        }
+
+        let fs = 19;
+        ctx.font = fs + 'px Arial';
+        while (ctx.measureText(s.name || '').width > 200 && fs > 10) { ctx.font = (--fs) + 'px Arial'; }
+        ctx.fillText(s.name || '', x + 130, y + 18);
+
+        ctx.font = '15px Arial';
+        const sr = s.singleReality !== undefined ? s.singleReality.toFixed(2) : '0.00';
+        ctx.fillText((s.category || '') + ' ' + (s.constant || 0).toFixed(1) + ' > ' + sr, x + 130, y + 75);
+
+        return loadImg('./jpgs/' + encodeURIComponent(s.name || 'NYA') + '.jpg').then(img => ctx.drawImage(img, x + 10, y + 13, iw, ih));
+    });
+    return Promise.all(promises);
+}
+
+// 辅助：FontFace 加载字体
+function loadFont(name, url) {
+    return new FontFace(name, 'url(' + url + ')').load().then(f => { document.fonts.add(f); return f; });
+}
 
 /* ========== Canvas 导出图片（含背景图、曲绘、等级徽章） ========== */
 function loadImage(src) {
