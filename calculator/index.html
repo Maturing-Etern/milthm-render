@@ -516,7 +516,9 @@ body {
             <span class="label">📋 数据输入</span>
             <button class="btn btn-primary" onclick="startProcess()" id="parseBtn">▶ 解析</button>
             <button class="btn btn-outline" onclick="document.getElementById('fileInput').click()">📁 导入文件</button>
-            <button class="btn btn-outline" onclick="exportImage()" id="exportBtn" style="display:none">🖼️ 导出图片</button>
+            <button class="btn btn-outline" onclick="exportImageNew()" id="exportBtn" style="display:none">🖼️ 导出图片</button>
+            <button class="btn btn-outline" onclick="downloadImage()" id="exportBtnOld" style="display:none">🖼️ 生成图像（旧版）</button>
+            <button class="btn btn-outline" onclick="openExportSettings()">⚙️ 查分图设置</button>
             <button class="btn btn-outline" onclick="exportTrendChart()" id="trendBtn" style="display:none">📈 趋势图</button>
             <input type="file" id="fileInput" accept=".json,.txt,.xml,.reg,.db,.png">
             <span id="fileStatus" style="font-size:0.78rem;color:var(--text-muted);margin-left:auto;"></span>
@@ -804,6 +806,7 @@ function renderResults(data) {
     document.getElementById('emptyState').style.display = 'none';
     document.getElementById('fileStatus').textContent = `${data.items.length} 首曲目`;
     document.getElementById('exportBtn').style.display = 'inline-block';
+    document.getElementById('exportBtnOld').style.display = 'inline-block';
 }
 
 function clearResults() {
@@ -817,6 +820,7 @@ function clearResults() {
     document.getElementById('statTlr').textContent = '—';
     document.getElementById('fileStatus').textContent = '';
     document.getElementById('exportBtn').style.display = 'none';
+    document.getElementById('exportBtnOld').style.display = 'none';
     document.getElementById('trendBtn').style.display = 'none';
     window._exportData = null;
     window._originalInput = null;
@@ -1404,7 +1408,7 @@ function loadImage(src) {
         img.src = src;
     });
 }
-function exportImage() {
+function exportImageNew() {
     const overlay = document.getElementById('exportOverlay');
     overlay.classList.add('active');
     const statusEl = document.getElementById('fileStatus');
@@ -1551,5 +1555,71 @@ function _doExport(data, overlay, statusEl) {
     <div class="spinner-lg"></div>
     <p>正在生成图片，请稍候...</p>
 </div>
+<!-- 旧版查分图导出依赖（cha_newui.js） -->
+<script>
+    // ol_runner / ol_updateImgGenProcess 桩函数（原 new_ui.js）
+    function ol_runner(func, args) {
+        try { func(...args); } catch(e) { console.error('ol_runner:', e); }
+    }
+    function ol_updateImgGenProcess(text) {
+        const el = document.getElementById('img_gen_process');
+        if (el) el.textContent = text;
+    }
+    // 设置弹窗控制
+    function openExportSettings() {
+        document.getElementById('exportSettingsOverlay').style.display = 'block';
+        document.getElementById('exportSettingsModal').style.display = 'block';
+    }
+    function closeExportSettings() {
+        document.getElementById('exportSettingsOverlay').style.display = 'none';
+        document.getElementById('exportSettingsModal').style.display = 'none';
+    }
+    function applyExportSettings() {
+        closeExportSettings();
+    }
+</script>
+<script src="js/cha_newui.js"></script>
+
+<!-- 旧版导出：生成进度 -->
+<div id="picgen" style="display:none; margin-top:8px; font-size:0.78rem; color:var(--text-muted);">
+    <span id="img_gen_process">请稍候...</span>
+</div>
+
+<!-- 旧版导出：查分图设置弹窗 -->
+<div id="exportSettingsOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.45); z-index:10000;" onclick="closeExportSettings()"></div>
+<div id="exportSettingsModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--glass-bg); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); border:1px solid var(--glass-border); border-radius:16px; padding:24px; z-index:10001; min-width:280px; box-shadow:var(--glass-shadow);">
+    <h3 style="margin-top:0; font-family:var(--font-bold);">查分图设置</h3>
+    <div style="margin-bottom:12px;">
+        <label style="font-size:0.92rem;">卡片数量：
+            <input type="number" id="cardCount" value="22" min="1" style="width:64px; padding:4px 8px; border-radius:8px; border:1px solid var(--glass-border); background:var(--glass-bg); color:var(--text-primary); font-size:0.92rem;">
+        </label>
+    </div>
+    <div style="margin-bottom:12px;">
+        <label style="font-size:0.92rem;">更换背景图：
+            <input type="file" id="bgImage" accept="image/*" style="font-size:0.85rem; color:var(--text-muted);">
+        </label>
+    </div>
+    <div style="margin-bottom:12px;">
+        <label style="font-size:0.92rem;">绘制不记入Reality的曲目：
+            <select id="excludeReality" style="padding:4px 8px; border-radius:8px; border:1px solid var(--glass-border); background:var(--glass-bg); color:var(--text-primary); font-size:0.92rem;">
+                <option value="false">否</option>
+                <option value="true">是</option>
+            </select>
+        </label>
+    </div>
+    <div style="margin-bottom:16px;">
+        <label style="font-size:0.92rem;">展示愚人节定数：
+            <select id="yrjds" style="padding:4px 8px; border-radius:8px; border:1px solid var(--glass-border); background:var(--glass-bg); color:var(--text-primary); font-size:0.92rem;">
+                <option value="false">否</option>
+                <option value="true">是</option>
+            </select>
+        </label>
+    </div>
+    <div style="text-align:right;">
+        <button class="btn btn-outline" onclick="closeExportSettings()" style="margin-right:8px;">取消</button>
+        <button class="btn btn-primary" onclick="applyExportSettings()">应用</button>
+    </div>
+</div>
+
 </body>
 </html>

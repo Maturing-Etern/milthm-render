@@ -1173,10 +1173,11 @@ function drawCards(ctx, canvas, items, images) {
     if (images[i][1]) ctx.drawImage(images[i][1], x + 351, y + 26, icon, icon);
   });
 
-  exportImage(canvas);
+  exportImageHelper(canvas);
 }
 
-function exportImage(canvas) {
+// 重命名为 exportImageHelper 避免与 index.html 的 exportImage() 冲突
+function exportImageHelper(canvas) {
   const input = document.getElementById('inputData').value,
     data = 'userdata:' + (window.data || input),
     imgBase64 = canvas.toDataURL('image/png').replace(/^data:image\/png;base64,/, ''),
