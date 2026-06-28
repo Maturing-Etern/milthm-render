@@ -1557,6 +1557,31 @@ function _doExport(data, overlay, statusEl) {
 </div>
 <!-- 旧版查分图导出依赖（cha_newui.js） -->
 <script>
+    // 【防污染】保存 index.html 自有全局函数引用
+    const __savedGlobals = {};
+    const __conflictNames = [
+        'reality','findScore','startProcess','processData','processDBFile',
+        'handleFile','parsePNGFile','processRegFile','hexToString',
+        'processXMLFile','processPrefsFile','extractJSON','tryParseJSON',
+        'drawUserInfo','tlr','drawCard','changeColumns','upl',
+        'getAllTables','extractScores','processHistoryRecords',
+        'calculateRecentScores','getBestScore','causesChartReduction',
+        'calculateUserReality','urltc','drawRadarChart','formatTimeDiff',
+        'lg_drawCards','loadImage','upload','openContributionDialog'
+    ];
+    for (const n of __conflictNames) {
+        if (typeof window[n] !== 'undefined') __savedGlobals[n] = window[n];
+    }
+
+    // layer 弹窗桩函数（cha_newui.js 依赖）
+    window.layer = {
+        msg: function(m, o) { console.log('[layer]', m); },
+        load: function(t, o) { console.log('[layer] load'); return 1; },
+        closeAll: function(t) {},
+        open: function(o) { return 1; },
+        close: function(i) {}
+    };
+
     // ol_runner / ol_updateImgGenProcess 桩函数（原 new_ui.js）
     function ol_runner(func, args) {
         try { func(...args); } catch(e) { console.error('ol_runner:', e); }
@@ -1579,6 +1604,32 @@ function _doExport(data, overlay, statusEl) {
     }
 </script>
 <script src="js/cha_newui.js"></script>
+<script>
+    // 提取旧版导出函数 + 旧版专属函数
+    const __oldDownload = window.downloadImage;
+    const __oldExportHelper = window.exportImageHelper;
+    const __oldDrawCards = window.drawCards;
+    const __oldLgDrawCards = window.lg_drawCards;
+    const __oldLoadImage = window.loadImage;
+    const __oldFormatTimeDiff = window.formatTimeDiff;
+
+    // 恢复被 cha_newui.js 覆盖的功能函数
+    for (const n of __conflictNames) {
+        if (__savedGlobals[n] !== void 0) window[n] = __savedGlobals[n];
+        else delete window[n];
+    }
+
+    // 重新挂载：只暴露旧版导出专用函数
+    window.downloadImage = __oldDownload;
+    window.exportImageHelper = __oldExportHelper;
+    window.drawCards = __oldDrawCards;
+    window.lg_drawCards = __oldLgDrawCards;
+    window.loadImage = __oldLoadImage;
+    window.formatTimeDiff = __oldFormatTimeDiff;
+
+    // 清理临时变量
+    delete window.layer;
+</script>
 
 <!-- 旧版导出：生成进度 -->
 <div id="picgen" style="display:none; margin-top:8px; font-size:0.78rem; color:var(--text-muted);">
