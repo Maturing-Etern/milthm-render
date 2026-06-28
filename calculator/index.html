@@ -518,6 +518,7 @@ body {
             <button class="btn btn-outline" onclick="document.getElementById('fileInput').click()">📁 导入文件</button>
             <button class="btn btn-outline" onclick="exportImageNew()" id="exportBtn" style="display:none">🖼️ 导出图片</button>
             <button class="btn btn-outline" onclick="downloadImage()" id="exportBtnOld" style="display:none">🖼️ 生成图像（旧版）</button>
+            <button class="btn btn-outline" onclick="exportImageV2()" id="exportBtnV2" style="display:none">✨ 生成图像（V2）</button>
             <button class="btn btn-outline" onclick="openExportSettings()">⚙️ 查分图设置</button>
             <button class="btn btn-outline" onclick="exportTrendChart()" id="trendBtn" style="display:none">📈 趋势图</button>
             <input type="file" id="fileInput" accept=".json,.txt,.xml,.reg,.db,.png">
@@ -807,6 +808,7 @@ function renderResults(data) {
     document.getElementById('fileStatus').textContent = `${data.items.length} 首曲目`;
     document.getElementById('exportBtn').style.display = 'inline-block';
     document.getElementById('exportBtnOld').style.display = 'inline-block';
+    document.getElementById('exportBtnV2').style.display = 'inline-block';
 }
 
 function clearResults() {
@@ -821,6 +823,7 @@ function clearResults() {
     document.getElementById('fileStatus').textContent = '';
     document.getElementById('exportBtn').style.display = 'none';
     document.getElementById('exportBtnOld').style.display = 'none';
+    document.getElementById('exportBtnV2').style.display = 'none';
     document.getElementById('trendBtn').style.display = 'none';
     window._exportData = null;
     window._originalInput = null;
@@ -1671,6 +1674,299 @@ function _doExport(data, overlay, statusEl) {
         <button class="btn btn-primary" onclick="applyExportSettings()">应用</button>
     </div>
 </div>
+
+<!-- ===== V2 风格导出：隐藏渲染容器 ===== -->
+<style>
+/* V2 渲染容器（隐藏，仅用于 html2canvas 截图） */
+#v2-render-root {
+    position: fixed;
+    top: -9999px;
+    left: -9999px;
+    width: 1200px;
+    font-family: 'milFont', 'Noto Sans SC', sans-serif;
+    color: #fff;
+    background: #111;
+    overflow: visible;
+}
+#v2-render-root * { margin: 0; padding: 0; box-sizing: border-box; }
+#v2-render-root p { color: white; margin: 0; }
+
+/* 背景模糊层 */
+.v2-bg {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 0; overflow: hidden;
+}
+.v2-bg img {
+    width: 110%; height: 110%; object-fit: cover;
+    filter: blur(30px) brightness(0.35);
+    transform: scale(1.1);
+}
+/* 内容层 */
+.v2-content { position: relative; z-index: 1; padding: 0; }
+
+/* 玩家信息栏 */
+.v2-player-bar {
+    display: flex; align-items: center; padding: 20px 40px;
+    margin: 24px 40px; gap: 24px;
+    background: rgba(0,0,0,0.45); backdrop-filter: blur(15px);
+    border-radius: 18px; border: 1px solid rgba(255,255,255,0.1);
+}
+.v2-avatar {
+    width: 72px; height: 72px; border-radius: 50%;
+    overflow: hidden; flex-shrink: 0;
+    border: 2px solid rgba(255,255,255,0.3);
+}
+.v2-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.v2-player-name { font-size: 28px; font-weight: bold; flex: 1; }
+.v2-rlt-val { font-size: 36px; font-weight: bold; color: #4fc3f7; }
+.v2-rlt-label { font-size: 14px; opacity: 0.7; text-align: right; }
+
+/* B20 区域 */
+.v2-b20-list { display: flex; flex-direction: column; gap: 8px; padding: 0 40px 12px; }
+.v2-b20-row { display: flex; gap: 20px; }
+
+/* 单曲卡片 */
+.v2-song {
+    width: 540px; height: 100px; display: flex;
+    align-items: center; position: relative;
+}
+.v2-ill-box {
+    width: 36%; height: auto; z-index: 1;
+    filter: drop-shadow(2px 4px 10px #00000055);
+    position: relative; flex-shrink: 0;
+}
+.v2-num {
+    width: 52px; height: 16px; background: rgba(255,255,255,1);
+    border-radius: 4px; position: absolute; top: 0; left: -4px;
+    text-align: center; z-index: 3;
+}
+.v2-num p { font-size: 11px; line-height: 130%; color: black; font-weight: bold; }
+.v2-ill {
+    height: 90px; width: 160px; border-radius: 10px;
+    overflow: hidden; flex-shrink: 0;
+}
+.v2-ill img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.v2-rank-dif {
+    width: 40%; height: 30px; bottom: 0; position: absolute;
+    margin-left: -8%; display: flex; border-radius: 6px; overflow: hidden;
+}
+.v2-rank-Drizzle { background-color: #66bb6a; }
+.v2-rank-Sprinkle { background-color: #42a5f5; }
+.v2-rank-Cloudburst { background-color: #ef5350; }
+.v2-rank-Clear { background-color: #ab47bc; }
+.v2-rank-Special { background-color: #ff9800; }
+.v2-dif-left, .v2-dif-right {
+    width: 50%; text-align: center;
+    display: flex; align-items: center; justify-content: center;
+}
+.v2-dif-left { border-right: 1px solid rgba(255,255,255,0.3); }
+.v2-dif-left p, .v2-dif-right p { font-size: 12px; color: white; }
+
+.v2-info {
+    margin-left: -30%; border-radius: 0 10px 10px 0;
+    width: 70%; height: 90%; backdrop-filter: blur(5px);
+    position: absolute; right: 2%; top: 5%; border-right: 3px solid;
+    display: flex; flex-direction: column; justify-content: center;
+}
+.v2-info-Drizzle { background: rgba(76,175,80,0.25); border-color: #66bb6a; }
+.v2-info-Sprinkle { background: rgba(33,150,243,0.25); border-color: #42a5f5; }
+.v2-info-Cloudburst { background: rgba(244,67,54,0.25); border-color: #ef5350; }
+.v2-info-Clear { background: rgba(156,39,176,0.25); border-color: #ab47bc; }
+.v2-info-Special { background: rgba(255,152,0,0.25); border-color: #ff9800; }
+
+.v2-songname {
+    width: 72%; margin-left: 24%;
+    display: flex; justify-content: center; align-items: center;
+    height: 28%;
+}
+.v2-songname p { text-align: center; font-size: 14px; }
+.v2-songinfo { width: 100%; height: 68%; position: relative; }
+.v2-rating {
+    width: 18%; height: auto; position: absolute; top: 2%; left: 6%;
+}
+.v2-rating img { width: 100%; filter: drop-shadow(0 0 8px #ffffffbb); }
+.v2-chengji {
+    width: 72%; margin-left: 24%; height: 100%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.v2-score p { font-size: 18px; font-weight: bold; }
+.v2-line { width: 90%; margin: 2px 0; border-bottom: 2px solid rgba(255,255,255,0.5); }
+.v2-meta { width: 100%; display: flex; justify-content: space-around; }
+.v2-meta p { font-size: 12px; }
+.v2-rlt-small p { color: #81c784; font-size: 12px; }
+
+/* OVERFLOW 分隔线 */
+.v2-overflow-divider {
+    width: 100%; height: 36px; display: flex; align-items: center;
+    justify-content: center; gap: 20px; margin: 8px 0;
+    filter: drop-shadow(0 0 10px #ffffffaa);
+}
+.v2-overflow-divider p { font-size: 18px; font-weight: bold; letter-spacing: 4px; }
+.v2-flow-line-box { display: flex; width: 30%; justify-content: center; gap: 2px; }
+.v2-flow-line { background: #fff; height: 14px; width: 4px; border-radius: 2px; }
+.v2-flow-line-box .v2-flow-line:nth-child(1) { width: 35%; }
+.v2-flow-line-box .v2-flow-line:nth-child(2) { width: 18%; }
+.v2-flow-line-box .v2-flow-line:nth-child(3) { width: 9%; }
+.v2-flow-line-box .v2-flow-line:nth-child(4) { width: 5%; }
+.v2-flow-line-box .v2-flow-line:nth-child(5) { width: 3%; }
+.v2-flow-line-box .v2-flow-line:nth-child(6) { width: 2%; }
+
+/* 底部版权 */
+.v2-footer { text-align: center; padding: 20px; opacity: 0.5; font-size: 13px; }
+</style>
+
+<!-- V2 隐藏渲染容器 -->
+<div id="v2-render-root"></div>
+
+<!-- html2canvas CDN -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+<script>
+// ===== V2 样式导出 =====
+const V2_LEVEL_MAP = {
+    'Drizzle': 'DZ', 'Sprinkle': 'SP', 'Cloudburst': 'CB', 'Clear': 'CL', 'Special': 'SC'
+};
+const V2_GRADE_ICON = {
+    'AP': 'ap', 'FC': 'fc', 'S': 's', 'A+': 'aplus', 'A': 'a', 'B': 'b', 'C': 'c', 'F': 'f'
+};
+
+function v2GradeIcon(grade) {
+    const map = { 'AP': 'ap', 'FC': 'fc', 'S': 's', 'A+': 'aplus', 'A': 'a', 'B': 'b', 'C': 'c', 'F': 'f' };
+    return map[grade] || 'f';
+}
+
+function buildV2Html(data) {
+    const { username, avgReality, items } = data;
+    const overflowIndex = 20;
+
+    // bestLevel 数字 → grade 字符串
+    const LEVEL_NUM_TO_GRADE = {0:'AP',1:'AP',2:'AP',3:'FC',4:'FC',5:'S',6:'S',7:'A',8:'B',9:'C',10:'F'};
+
+    let rows = '';
+    let i = 0;
+    for (; i < items.length; i++) {
+        const song = items[i];
+        // 难度分类
+        const level = song.category || 'Drizzle';
+        const abbr = V2_LEVEL_MAP[level] || level.substring(0,2).toUpperCase();
+        // grade 字符串
+        const gradeStr = (typeof song.bestLevel === 'number')
+            ? LEVEL_NUM_TO_GRADE[song.bestLevel] || 'F'
+            : (song.grade || 'F');
+        const gradeIcon = v2GradeIcon(gradeStr);
+        // 分数 / 准确率 / Reality
+        const scoreVal = song.bestScore || song.score || 0;
+        const accVal = parseFloat(song.bestAccuracy || song.accuracy || 0);
+        const rltVal = parseFloat(song.singleReality || song.reality || 0);
+        const illSrc = `./jpgs/default.jpg`;
+
+        if (i === overflowIndex) {
+            rows += `
+            <div class="v2-overflow-divider">
+                <div class="v2-flow-line-box">
+                    <div class="v2-flow-line"></div><div class="v2-flow-line"></div><div class="v2-flow-line"></div>
+                    <div class="v2-flow-line"></div><div class="v2-flow-line"></div><div class="v2-flow-line"></div>
+                </div>
+                <p>OVER FLOW</p>
+                <div class="v2-flow-line-box">
+                    <div class="v2-flow-line"></div><div class="v2-flow-line"></div><div class="v2-flow-line"></div>
+                    <div class="v2-flow-line"></div><div class="v2-flow-line"></div><div class="v2-flow-line"></div>
+                </div>
+            </div>`;
+        }
+
+        if (i % 2 === 0) rows += '<div class="v2-b20-row">';
+
+        rows += `
+        <div class="v2-song">
+            <div class="v2-ill-box">
+                <div class="v2-num"><p>#${i+1}</p></div>
+                <div class="v2-ill"><img src="${illSrc}" crossorigin="anonymous" onerror="this.style.display='none'"></div>
+                <div class="v2-rank-dif v2-rank-${level}">
+                    <div class="v2-dif-left"><p>${abbr}</p></div>
+                    <div class="v2-dif-right"><p>${parseFloat(song.constant || 0).toFixed(1)}</p></div>
+
+                </div>
+            </div>
+            <div class="v2-info v2-info-${level}">
+                <div class="v2-songname"><p>${song.name || ''}</p></div>
+                <div class="v2-songinfo">
+                    <div class="v2-rating"><img src="./jpgs/grade/${gradeIcon}.png" crossorigin="anonymous" onerror="this.style.display='none'"></div>
+                    <div class="v2-chengji">
+                        <div class="v2-score"><p>${scoreVal}</p></div>
+                        <div class="v2-line"></div>
+                        <div class="v2-meta">
+                            <p>${(accVal*100).toFixed(2)}%</p>
+                            <div class="v2-rlt-small"><p>${rltVal.toFixed(2)}</p></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+
+        if (i % 2 === 1 || i === items.length - 1) rows += '</div>';
+    }
+
+    return `
+    <div style="position:relative; min-height:100%;">
+        <div class="v2-bg">
+            <img src="./jpgs/background/0.jpg" crossorigin="anonymous" onerror="this.style.background='#0d1b2a'; this.remove()">
+        </div>
+        <div class="v2-content">
+            <div class="v2-player-bar">
+                <div class="v2-avatar"><img src="./jpgs/avatar/default.png" crossorigin="anonymous" onerror="this.style.display='none'"></div>
+                <div class="v2-player-name">${username || 'Player'}</div>
+                <div style="text-align:right">
+                    <div class="v2-rlt-val">${avgReality}</div>
+                    <div class="v2-rlt-label">Reality</div>
+                </div>
+            </div>
+            <div class="v2-b20-list">${rows}</div>
+            <div class="v2-footer">mil-plugin · ${new Date().toLocaleDateString('zh-CN')}</div>
+        </div>
+    </div>`;
+}
+
+async function exportImageV2() {
+    const data = window._exportData;
+    if (!data || !data.items || !data.items.length) {
+        alert('⚠ 请先解析数据');
+        return;
+    }
+    const overlay = document.getElementById('exportOverlay');
+    const statusEl = document.getElementById('fileStatus');
+    overlay.classList.add('active');
+    statusEl.textContent = '⏳ V2 图片生成中...';
+
+    const root = document.getElementById('v2-render-root');
+    root.innerHTML = buildV2Html(data);
+
+    // 等待图片加载
+    await new Promise(r => setTimeout(r, 1200));
+
+    try {
+        const canvas = await html2canvas(root, {
+            width: 1200,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: '#111',
+            scale: 1,
+            logging: false
+        });
+        const link = document.createElement('a');
+        link.download = `b20_v2_${Date.now()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        statusEl.textContent = '✅ V2 图片已导出';
+    } catch(e) {
+        console.error(e);
+        statusEl.textContent = '❌ 生成失败：' + e.message;
+    } finally {
+        overlay.classList.remove('active');
+        root.innerHTML = '';
+    }
+}
+</script>
 
 </body>
 </html>
