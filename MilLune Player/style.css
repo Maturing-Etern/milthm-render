@@ -15,57 +15,57 @@
     font-display: swap;
 }
 
-/* ==================== 设计令牌 - Rain Editor / 播放器混合风格 ==================== */
+/* ==================== 设计令牌 - 紫雨之夜主题（深紫深蓝 + 雨夜霓虹） ==================== */
 :root {
     /* 字体 */
     --font-primary: 'milFont', 'Segoe UI', 'Poppins', 'Quicksand', system-ui, -apple-system, sans-serif;
     --font-bold: 'milFontBold', 'milFont', 'Segoe UI', system-ui, sans-serif;
     --font-mono: 'Consolas', 'Fira Code', monospace;
 
-    /* 主色调 - Rain Editor 天蓝/青绿 */
-    --rain-sky: rgb(142, 197, 252);
-    --rain-teal: rgb(41, 168, 185);
-    --rain-sky-dark: rgb(128, 178, 228);
-    --rain-teal-dark: rgb(37, 153, 168);
-    --rain-blue: rgb(92, 182, 218);
+    /* 主色调 - 深紫/深蓝（借鉴 Phira 霓虹渐变，融入雨夜） */
+    --rain-sky: rgb(139, 92, 246);          /* 紫 */
+    --rain-teal: rgb(59, 130, 246);         /* 蓝 */
+    --rain-sky-dark: rgb(124, 58, 237);     /* 深紫 */
+    --rain-teal-dark: rgb(37, 99, 235);     /* 深蓝 */
+    --rain-blue: rgb(56, 189, 248);         /* 青蓝点缀 */
 
     /* 播放器深色主题变量 */
-    --bg-dark: #1a1a2e;
-    --panel-dark: #16213e;
-    --text-light: #e0e0e0;
-    --text-dim: #aaa;
+    --bg-dark: #0a0e1f;
+    --panel-dark: #131033;
+    --text-light: #e8e6f7;
+    --text-dim: #9a95c0;
     --accent: var(--rain-sky);
-    --border-dark: #334;
-    --accent-glow: rgba(142, 197, 252, 0.3);
+    --border-dark: #2a2750;
+    --accent-glow: rgba(139, 92, 246, 0.35);
 
-    /* 浅色主题（设置面板用） */
-    --bg-primary: #ffffff;
-    --bg-secondary: #f7f8fa;
-    --bg-card: linear-gradient(135deg, hsl(210, 25%, 88%), hsl(250, 20%, 90%));
-    --bg-hover: hsl(210, 20%, 82%);
-    --text-primary: #2c3e50;
-    --text-secondary: rgba(0, 0, 0, 0.6);
-    --text-muted: rgba(0, 0, 0, 0.4);
+    /* 浅色主题（设置面板用，改为深色玻璃） */
+    --bg-primary: #1a1740;
+    --bg-secondary: #16132f;
+    --bg-card: linear-gradient(135deg, hsl(250, 40%, 22%), hsl(235, 45%, 20%));
+    --bg-hover: hsl(250, 35%, 18%);
+    --text-primary: #ece9fb;
+    --text-secondary: rgba(220, 216, 250, 0.72);
+    --text-muted: rgba(200, 196, 240, 0.45);
 
     /* 边框 */
-    --border-color: #353535;
-    --border-light: rgba(142, 197, 252, 0.4);
+    --border-color: #3a3670;
+    --border-light: rgba(167, 139, 250, 0.4);
 
     /* 状态色 */
-    --success: #4db6ac;
-    --error: #ef5350;
-    --warning: #ffb74d;
+    --success: #34d399;
+    --error: #f87171;
+    --warning: #fbbf24;
 
-    /* 阴影 */
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
-    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.15);
-    --shadow-deep: 0 4px 20px rgba(0, 0, 0, 0.5);
+    /* 阴影（带紫光） */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+    --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.45);
+    --shadow-lg: 0 8px 28px rgba(0, 0, 0, 0.5);
+    --shadow-deep: 0 4px 24px rgba(0, 0, 0, 0.6), 0 0 30px rgba(139, 92, 246, 0.12);
 
     /* 圆角 */
-    --radius-sm: 0.25em;
-    --radius-md: 0.6em;
-    --radius-lg: 1rem;
+    --radius-sm: 0.35em;
+    --radius-md: 0.7em;
+    --radius-lg: 1.1rem;
     --radius-xl: 2rem;
 
     /* 过渡 */
@@ -466,7 +466,7 @@ input[type="checkbox"] {
     margin-top: 6px;
 }
 
-/* ==================== 背景层（Rain Editor 兼容） ==================== */
+/* ==================== 背景层（紫雨之夜） ==================== */
 .static-bg {
     position: fixed;
     top: 0;
@@ -475,8 +475,8 @@ input[type="checkbox"] {
     height: 100%;
     background: url('./Background.png') center center / cover no-repeat;
     z-index: 0;
-    filter: brightness(1.05) saturate(0.95);
-    opacity: 0.92;
+    filter: brightness(0.55) saturate(1.15) hue-rotate(15deg);
+    opacity: 0.85;
 }
 
 .bg-overlay {
@@ -486,14 +486,11 @@ input[type="checkbox"] {
     width: 100%;
     height: 100%;
     z-index: 0;
-    background: linear-gradient(
-        135deg,
-        rgba(142, 197, 252, 0.03) 0%,
-        rgba(255, 255, 255, 0.30) 40%,
-        rgba(240, 245, 250, 0.32) 60%,
-        rgba(41, 168, 185, 0.02) 100%
-    );
-    backdrop-filter: blur(4px) saturate(1.1);
+    background:
+        radial-gradient(ellipse at 20% 10%, rgba(139, 92, 246, 0.16) 0%, transparent 55%),
+        radial-gradient(ellipse at 85% 90%, rgba(59, 130, 246, 0.14) 0%, transparent 55%),
+        linear-gradient(160deg, rgba(10, 14, 31, 0.72) 0%, rgba(19, 16, 51, 0.66) 45%, rgba(8, 10, 24, 0.82) 100%);
+    backdrop-filter: blur(3px) saturate(1.05);
 }
 
 /* ==================== 雨滴Canvas ==================== */
@@ -1389,6 +1386,74 @@ input[type="checkbox"] {
     #setup-panel h2 { font-size: 1.2rem; }
 }
 
+/* ==================== 移动端触屏适配 ==================== */
+@media (max-width: 800px) {
+    /* 触屏友好：加大按钮点击区域 */
+    .action-btn, .upload-btn, .settings-btn, .info-link {
+        padding: 0.62em 1.25em;
+        font-size: 0.95rem;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+    }
+    .file-info { max-width: 160px; }
+    .logo-icon { font-size: 1.5rem; }
+    .logo-text { font-size: 1.1rem; }
+    .navbar { gap: 0.6rem; }
+    .controls { gap: 0.55rem; }
+}
+
+@media (max-width: 550px) {
+    .action-btn, .upload-btn, .settings-btn, .info-link {
+        padding: 0.65em 1.1em;
+        font-size: 0.9rem;
+    }
+}
+
+/* ==================== 移动端横屏提示 ==================== */
+.rotate-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(8, 6, 18, 0.94);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 5000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.2rem;
+    color: #fff;
+    text-align: center;
+    padding: 2rem;
+}
+.rotate-icon {
+    font-size: 4.5rem;
+    animation: rotateHint 1.8s ease-in-out infinite;
+    filter: drop-shadow(0 0 20px rgba(142, 197, 252, 0.6));
+}
+.rotate-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--rain-teal), var(--rain-sky));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin: 0;
+}
+.rotate-sub {
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.65);
+    margin: 0;
+    max-width: 260px;
+    line-height: 1.6;
+}
+@keyframes rotateHint {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(90deg); }
+}
+
 /* ==================== 结算面板样式 ==================== */
 .result-modal {
     position: fixed;
@@ -2029,4 +2094,656 @@ input[type="checkbox"] {
         height: 48px;
         font-size: 1.2rem;
     }
+}
+
+/* ============================================================
+   紫雨之夜主题覆盖层（深紫深蓝 + 雨夜霓虹，借鉴 Phira 设计语言）
+   追加于 2026-08-05，统一覆盖浅色组件为深色紫蓝系
+   ============================================================ */
+
+/* 全局底色 */
+body {
+    background: radial-gradient(ellipse at 50% 0%, #1b1645 0%, #0a0e1f 55%, #070913 100%);
+    color: var(--text-light);
+}
+
+#loading-screen {
+    background: radial-gradient(ellipse at 50% 0%, #1b1645 0%, #0a0e1f 55%, #070913 100%);
+}
+
+/* ========== 导航栏：深紫玻璃拟态 ========== */
+.navbar {
+    background: linear-gradient(135deg, rgba(26, 23, 64, 0.78), rgba(19, 16, 51, 0.86));
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1.5px solid rgba(167, 139, 250, 0.22);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 24px rgba(139, 92, 246, 0.10);
+}
+
+.logo-text {
+    background: linear-gradient(135deg, #a78bfa, #60a5fa);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: none;
+}
+
+.logo-icon {
+    filter: drop-shadow(0 0 10px rgba(167, 139, 250, 0.7));
+}
+
+/* ========== 按钮：紫蓝霓虹渐变 ========== */
+.upload-btn {
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    border: 1.2px solid rgba(167, 139, 250, 0.35);
+    box-shadow: 0 4px 18px rgba(124, 58, 237, 0.35);
+}
+
+.action-btn {
+    background: linear-gradient(135deg, rgba(37, 33, 84, 0.9), rgba(26, 22, 60, 0.95));
+    border: 1.2px solid rgba(167, 139, 250, 0.25);
+    color: var(--text-light);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.action-btn.play {
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    border-color: rgba(167, 139, 250, 0.4);
+    box-shadow: 0 4px 22px rgba(124, 58, 237, 0.4);
+}
+
+.action-btn.reset {
+    background: linear-gradient(135deg, rgba(40, 36, 90, 0.85), rgba(28, 25, 66, 0.9));
+    color: #b8b0e8;
+}
+
+.action-btn.fullscreen {
+    background: linear-gradient(135deg, rgba(40, 36, 90, 0.85), rgba(28, 25, 66, 0.9));
+}
+
+.settings-btn {
+    background: linear-gradient(135deg, rgba(37, 33, 84, 0.9), rgba(26, 22, 60, 0.95));
+    border: 1.2px solid rgba(167, 139, 250, 0.25);
+    color: #a78bfa;
+}
+
+.milbtn {
+    background: linear-gradient(135deg, rgba(37, 33, 84, 0.9), rgba(26, 22, 60, 0.95));
+    border: 1.2px solid rgba(167, 139, 250, 0.25);
+    color: var(--text-light);
+}
+
+.info-link {
+    color: #a78bfa;
+}
+
+/* ========== 控制组件 ========== */
+.file-info {
+    background: linear-gradient(135deg, rgba(37, 33, 84, 0.85), rgba(26, 22, 60, 0.9));
+    border: 1px solid rgba(167, 139, 250, 0.2);
+    color: #b8b0e8;
+}
+
+.ratio-control {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.14), rgba(59, 130, 246, 0.10));
+    border: 1px solid rgba(167, 139, 250, 0.22);
+}
+
+.ratio-control label {
+    color: #a78bfa;
+}
+
+.ratio-select {
+    background: rgba(16, 14, 38, 0.92);
+    border: 1.2px solid rgba(167, 139, 250, 0.25);
+    color: var(--text-light);
+}
+
+.custom-ratio-input input {
+    background: rgba(16, 14, 38, 0.92);
+    border: 1.2px solid rgba(167, 139, 250, 0.25);
+    color: var(--text-light);
+}
+
+.checkbox-wrapper {
+    color: var(--text-light);
+}
+
+/* ========== 面板/弹窗：深紫玻璃 ========== */
+#setup-panel {
+    background: linear-gradient(145deg, rgba(26, 23, 64, 0.92), rgba(13, 11, 33, 0.97));
+    border: 1px solid rgba(167, 139, 250, 0.2);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6), 0 0 60px rgba(139, 92, 246, 0.12);
+}
+
+#setup-panel h2 {
+    background: linear-gradient(135deg, #a78bfa, #60a5fa);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+#level-select-content {
+    background: linear-gradient(160deg, rgba(26, 23, 64, 0.95), rgba(13, 11, 33, 0.98));
+    border: 1px solid rgba(167, 139, 250, 0.22);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6), 0 0 60px rgba(139, 92, 246, 0.12);
+}
+
+#level-select-content h3 {
+    background: linear-gradient(135deg, #a78bfa, #60a5fa);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.level-item {
+    background: rgba(167, 139, 250, 0.05);
+    border: 1.2px solid rgba(167, 139, 250, 0.12);
+}
+
+.level-item:hover {
+    border-color: #a78bfa;
+    background: rgba(139, 92, 246, 0.14);
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.18);
+}
+
+.level-difficulty {
+    color: #a78bfa;
+}
+
+/* 格式说明弹窗 */
+.modal-content {
+    background: linear-gradient(145deg, rgba(26, 23, 64, 0.96), rgba(13, 11, 33, 0.98));
+    border: 1px solid rgba(167, 139, 250, 0.22);
+    color: var(--text-light);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6), 0 0 60px rgba(139, 92, 246, 0.12);
+}
+
+.modal-content h3 {
+    background: linear-gradient(135deg, #a78bfa, #60a5fa);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.modal-content code {
+    background: rgba(167, 139, 250, 0.12);
+    border: 1px solid rgba(167, 139, 250, 0.25);
+    color: #c4b5fd;
+}
+
+/* 输入框 */
+.input-group input {
+    background: rgba(16, 14, 38, 0.9);
+    border: 1.2px solid rgba(167, 139, 250, 0.25);
+    color: var(--text-light);
+}
+
+.input-group label {
+    color: #b8b0e8;
+}
+
+/* ========== 初始提示 ========== */
+#initialPrompt {
+    color: rgba(200, 196, 240, 0.55);
+}
+
+#initialPrompt p {
+    color: #b8b0e8 !important;
+}
+
+#initialPrompt p[style*="0.45"] {
+    color: rgba(200, 196, 240, 0.5) !important;
+}
+
+/* ========== 状态栏 ========== */
+.status-bar {
+    background: linear-gradient(135deg, rgba(26, 23, 64, 0.8), rgba(13, 11, 33, 0.9));
+    border: 1px solid rgba(167, 139, 250, 0.18);
+    color: #b8b0e8;
+}
+
+.status-msg {
+    color: #b8b0e8;
+}
+
+.status-indicator {
+    background: #a78bfa;
+    box-shadow: 0 0 12px rgba(167, 139, 250, 0.8);
+}
+
+/* ========== 结算面板微调（本体已深色，统一紫光） ========== */
+.result-card {
+    border: 1px solid rgba(167, 139, 250, 0.16);
+    box-shadow:
+        0 28px 90px rgba(0, 0, 0, 0.75),
+        0 0 90px rgba(139, 92, 246, 0.14),
+        0 0 50px rgba(59, 130, 246, 0.08),
+        inset 0 1px 0 rgba(200, 180, 255, 0.08);
+}
+
+.result-modal.show .result-card {
+    box-shadow:
+        0 28px 90px rgba(0, 0, 0, 0.75),
+        0 0 110px rgba(139, 92, 246, 0.18),
+        0 0 60px rgba(59, 130, 246, 0.10),
+        inset 0 1px 0 rgba(200, 180, 255, 0.10);
+}
+
+.result-btn.retry-btn {
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    border: 1px solid rgba(167, 139, 250, 0.4);
+    box-shadow: 0 4px 20px rgba(124, 58, 237, 0.35);
+}
+
+/* ========== 剧场模式下的导航栏（深紫玻璃） ========== */
+.app-container.theater-mode .navbar.show {
+    background: linear-gradient(135deg, rgba(20, 17, 50, 0.9), rgba(12, 10, 30, 0.94));
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 30px rgba(139, 92, 246, 0.15);
+}
+
+.app-container.theater-mode .status-bar.show {
+    background: linear-gradient(135deg, rgba(20, 17, 50, 0.85), rgba(12, 10, 30, 0.92));
+}
+
+/* ========== 移动端保持按钮加大（深色系） ========== */
+@media (max-width: 800px) {
+    .action-btn, .upload-btn, .settings-btn, .info-link {
+        padding: 0.62em 1.25em;
+        font-size: 0.95rem;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+    }
+}
+
+@media (max-width: 550px) {
+    .action-btn, .upload-btn, .settings-btn, .info-link {
+        padding: 0.65em 1.1em;
+        font-size: 0.9rem;
+    }
+}
+
+/* ========== 设置面板（紫雨之夜） ========== */
+.settings-content {
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+.setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.7rem 0.2rem;
+    border-bottom: 1px solid rgba(167, 139, 250, 0.12);
+}
+
+.setting-row:last-of-type {
+    border-bottom: none;
+}
+
+.setting-label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.setting-name {
+    font-weight: 600;
+    color: var(--text-light);
+    font-size: 0.95rem;
+}
+
+.setting-desc {
+    font-size: 0.72rem;
+    color: var(--text-dim);
+}
+
+.setting-input {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-shrink: 0;
+}
+
+.setting-value {
+    min-width: 52px;
+    text-align: right;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: #a78bfa;
+    font-weight: 600;
+}
+
+/* 滑条美化 */
+.setting-input input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 150px;
+    height: 6px;
+    border-radius: 6px;
+    background: linear-gradient(90deg, rgba(124, 58, 237, 0.7), rgba(59, 130, 246, 0.7));
+    outline: none;
+    cursor: pointer;
+}
+
+.setting-input input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #a78bfa, #60a5fa);
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    box-shadow: 0 0 12px rgba(167, 139, 250, 0.7);
+    cursor: pointer;
+}
+
+.setting-input input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #a78bfa, #60a5fa);
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    box-shadow: 0 0 12px rgba(167, 139, 250, 0.7);
+    cursor: pointer;
+}
+
+/* 开关 */
+.toggle {
+    position: relative;
+    display: inline-block;
+    width: 52px;
+    height: 28px;
+    flex-shrink: 0;
+}
+
+.toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: rgba(37, 33, 84, 0.9);
+    border: 1.2px solid rgba(167, 139, 250, 0.3);
+    border-radius: 28px;
+    transition: all var(--transition-normal);
+    cursor: pointer;
+}
+
+.toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    left: 3px;
+    top: 3px;
+    border-radius: 50%;
+    background: #9a95c0;
+    transition: all var(--transition-normal);
+}
+
+.toggle input:checked + .toggle-slider {
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    border-color: rgba(167, 139, 250, 0.5);
+    box-shadow: 0 0 16px rgba(124, 58, 237, 0.45);
+}
+
+.toggle input:checked + .toggle-slider::before {
+    transform: translateX(24px);
+    background: #fff;
+}
+
+/* 设置面板保存按钮 */
+.settings-content .modal-close {
+    margin-top: 0.4rem;
+    width: 100%;
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    border: none;
+    color: #fff;
+    font-weight: 700;
+    padding: 0.7rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    box-shadow: 0 4px 18px rgba(124, 58, 237, 0.35);
+    transition: all var(--transition-normal);
+}
+
+.settings-content .modal-close:hover {
+    filter: brightness(1.12);
+    transform: translateY(-1px);
+}
+
+/* 移动端设置面板适配 */
+@media (max-width: 550px) {
+    .setting-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    .setting-input {
+        width: 100%;
+    }
+    .setting-input input[type="range"] {
+        flex: 1;
+        width: auto;
+    }
+}
+
+/* ========== 曲库（收藏/最近/成绩） ========== */
+.library-content {
+    max-width: 560px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.library-tabs {
+    display: flex;
+    gap: 0.5rem;
+    border-bottom: 1px solid rgba(167, 139, 250, 0.15);
+    padding-bottom: 0.5rem;
+}
+
+.library-tab {
+    flex: 1;
+    padding: 0.55rem 0.5rem;
+    background: rgba(167, 139, 250, 0.06);
+    border: 1.2px solid rgba(167, 139, 250, 0.18);
+    border-radius: var(--radius-md);
+    color: #b8b0e8;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+}
+
+.library-tab:hover {
+    background: rgba(139, 92, 246, 0.14);
+}
+
+.library-tab.active {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.35), rgba(79, 70, 229, 0.35));
+    border-color: rgba(167, 139, 250, 0.5);
+    color: #fff;
+    box-shadow: 0 0 16px rgba(124, 58, 237, 0.25);
+}
+
+.library-body {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 200px;
+    max-height: 50vh;
+}
+
+.library-pane {
+    display: none;
+}
+
+.library-pane.active {
+    display: block;
+}
+
+.library-empty {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 0.88rem;
+    padding: 2rem 1rem;
+    line-height: 1.8;
+}
+
+.library-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    padding: 0.7rem 0.85rem;
+    margin: 0.4rem 0;
+    background: rgba(167, 139, 250, 0.05);
+    border: 1.2px solid rgba(167, 139, 250, 0.12);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+}
+
+.library-item:hover {
+    border-color: rgba(167, 139, 250, 0.4);
+    background: rgba(139, 92, 246, 0.1);
+}
+
+.library-item-info {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.library-item-name {
+    font-weight: 600;
+    color: var(--text-light);
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.library-item-sub {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin-top: 0.15rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.library-item-actions {
+    display: flex;
+    gap: 0.4rem;
+    flex-shrink: 0;
+}
+
+.lib-btn {
+    padding: 0.35rem 0.7rem;
+    border-radius: var(--radius-sm);
+    border: 1.2px solid rgba(167, 139, 250, 0.25);
+    background: rgba(37, 33, 84, 0.9);
+    color: #b8b0e8;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+}
+
+.lib-btn.play {
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    border-color: rgba(167, 139, 250, 0.4);
+    color: #fff;
+}
+
+.lib-btn.play:hover {
+    filter: brightness(1.15);
+}
+
+.lib-btn.del {
+    color: #f87171;
+    border-color: rgba(248, 113, 113, 0.3);
+}
+
+.lib-btn.del:hover {
+    background: rgba(248, 113, 113, 0.15);
+}
+
+/* B20 卡片 */
+.b20-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 1.2rem;
+    margin-bottom: 0.8rem;
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.18), rgba(59, 130, 246, 0.12));
+    border: 1.2px solid rgba(167, 139, 250, 0.3);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 0 24px rgba(124, 58, 237, 0.15);
+}
+
+.b20-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: #a78bfa;
+}
+
+.b20-value {
+    font-size: 2rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #a78bfa, #60a5fa);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.b20-sub {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+}
+
+/* 成绩评级 */
+.score-grade {
+    display: inline-block;
+    padding: 0.1rem 0.45rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.72rem;
+    font-weight: 700;
+    margin-left: 0.4rem;
+}
+
+.grade-s { background: linear-gradient(135deg, #7c3aed, #4f46e5); color: #fff; }
+.grade-a { background: rgba(59, 130, 246, 0.25); color: #60a5fa; }
+.grade-b { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+.grade-c { background: rgba(148, 163, 184, 0.2); color: #94a3b8; }
+
+/* 收藏按钮（结算面板） */
+.result-btn.fav-btn {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.3), rgba(59, 130, 246, 0.25));
+    border: 1.2px solid rgba(167, 139, 250, 0.35);
+    color: #c4b5fd;
+}
+
+.result-btn.fav-btn:hover {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.5), rgba(59, 130, 246, 0.4));
+    color: #fff;
+}
+
+.result-btn.fav-btn:disabled {
+    opacity: 0.75;
+    cursor: default;
+    transform: none;
 }

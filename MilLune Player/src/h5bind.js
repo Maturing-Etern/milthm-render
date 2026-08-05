@@ -288,6 +288,9 @@ class MilLunePlayer {
         this._isAutoplay = options.isAutoplay;
         this._completionStats = null; // 存储结算数据
         this._searchEngine = null;     // 反向搜索引擎 WASM（用于反推判定）
+        // 游玩设置（可从 options 初始化，也可运行时通过 set_offset/set_rate 修改）
+        this._offset = options.offset || 0;          // 延迟调整（秒，正值=判定提前）
+        this._rate = options.rate || 1;              // 倍速（0.5 ~ 2.0）
     }
 
     /**
@@ -510,18 +513,6 @@ void main() {
 
         let isTouchDevice = false;
 
-        // 将视口坐标 (clientX, clientY) 转换为 Canvas 内部坐标系
-        // Canvas 的 CSS 显示尺寸可能与 buffer 尺寸不同（缩放），需要做比例换算
-        const toCanvasCoords = (clientX, clientY) => {
-            const rect = this._canvas.getBoundingClientRect();
-            const scaleX = this._canvas.width / rect.width;
-            const scaleY = this._canvas.height / rect.height;
-            return {
-                x: (clientX - rect.left) * scaleX,
-                y: (clientY - rect.top) * scaleY,
-            };
-        };
-
         this._canvas.addEventListener("keydown", e => {
             if (!this._currentAudioSource) return;
             if (e.repeat) return;
@@ -540,8 +531,7 @@ void main() {
             if (!this._currentAudioSource) return;
             const t = this.get_chart_time();
             const touch = e.changedTouches[0];
-            const pos = toCanvasCoords(touch.clientX, touch.clientY);
-            this.#call_wasm("h5bind_judgement_touchstart", this._ctx, t, BigInt(touch.identifier), pos.x, pos.y);
+            this.#call_wasm("h5bind_judgement_touchstart", this._ctx, t, BigInt(touch.identifier), touch.clientX, touch.clientY);
         });
 
         this._canvas.addEventListener("touchmove", e => {
@@ -549,8 +539,7 @@ void main() {
             if (!this._currentAudioSource) return;
             const t = this.get_chart_time();
             const touch = e.changedTouches[0];
-            const pos = toCanvasCoords(touch.clientX, touch.clientY);
-            this.#call_wasm("h5bind_judgement_touchmove", this._ctx, t, BigInt(touch.identifier), pos.x, pos.y);
+            this.#call_wasm("h5bind_judgement_touchmove", this._ctx, t, BigInt(touch.identifier), touch.clientX, touch.clientY);
         });
 
         this._canvas.addEventListener("touchend", e => {
@@ -565,8 +554,7 @@ void main() {
             if (!this._currentAudioSource) return;
             if (isTouchDevice) return;
             const t = this.get_chart_time();
-            const pos = toCanvasCoords(e.clientX, e.clientY);
-            this.#call_wasm("h5bind_judgement_touchstart", this._ctx, t, BigInt(2000 + e.button), pos.x, pos.y);
+            this.#call_wasm("h5bind_judgement_touchstart", this._ctx, t, BigInt(2000 + e.button), e.clientX, e.clientY);
         });
 
         this._canvas.addEventListener("mousemove", e => {
@@ -574,8 +562,7 @@ void main() {
             if (isTouchDevice) return;
             if (e.buttons <= 0) return;
             const t = this.get_chart_time();
-            const pos = toCanvasCoords(e.clientX, e.clientY);
-            this.#call_wasm("h5bind_judgement_touchmove", this._ctx, t, BigInt(2000 + e.button), pos.x, pos.y);
+            this.#call_wasm("h5bind_judgement_touchmove", this._ctx, t, BigInt(2000 + e.button), e.clientX, e.clientY);
         });
 
         this._canvas.addEventListener("mouseup", e => {
@@ -736,7 +723,7 @@ void main() {
         // 命名规则：hit.ogg = 普通点击(tap/hold等)，drag.OGG = 拖拽(drag/exdrag等)
         try {
             const isDrag = key.includes("drag");
-            const fileName = isDrag ? "drag.ogg" : "hit.ogg";
+            const fileName = isDrag ? "drag.OGG" : "hit.ogg";
             const externalUrl = this._hitsoundPath + "/" + fileName;
             
 
@@ -989,7 +976,23 @@ void main() {
         try {
             const source = this._audioCtx.createBufferSource();
             source.buffer = clip;
-            source.connect(this._audioCtx.destination);
+            // drag 音效原始音量极低（-25.7dB），需要增益放大到与 hit（-13.7dB）相当
+            if (key.includes("drag")) {
+                // 确保音频上下文已恢复
+                if (this._audioCtx.state === 'suspended') {
+                    this._audioCtx.resume().then(() => {
+                    }).catch(e => {
+                    });
+                }
+                const gainNode = this._audioCtx.createGain();
+                // 计算: 目标补偿 12dB (-25.7dB → -13.7dB), 增益倍数 = 10^(12/20) ≈ 3.98
+                // 原值 3.5 ≈ +10.9dB 补偿，可能仍偏小；调整为 4.5 ≈ +13.1dB 补偿
+                gainNode.gain.value = 4.5; // ≈ +13.1dB 补偿
+                source.connect(gainNode);
+                gainNode.connect(this._audioCtx.destination);
+            } else {
+                source.connect(this._audioCtx.destination);
+            }
             source.start(0);
         } catch (e) {
             console.error(`[Hitsound] ❌ 播放失败: key=${key}, error=${e.message}`);
@@ -1596,6 +1599,9 @@ void main() {
         this._currentAudioSource = this.#create_audio_buffer_source(this._audioClip);
         this._currentAudioSource.start(0, t);
         this._currentAudioSource.start_time = this._audioCtx.currentTime - t;
+        if (this._rate !== 1) {
+            this._currentAudioSource.playbackRate.value = this._rate;
+        }
         this._currentAudioSource.onended = () => {
             this._currentAudioSource.disconnect();
             this._currentAudioSource = null;
@@ -1613,7 +1619,7 @@ void main() {
             this.start(this.currentTime);
         } else {
             this._currentAudioSource.stop();
-            this._audioTime = this._audioCtx.currentTime - this._currentAudioSource.start_time;
+            this._audioTime = (this._audioCtx.currentTime - this._currentAudioSource.start_time) * this._rate;
         }
     }
 
@@ -1635,7 +1641,27 @@ void main() {
     }
 
     get_chart_time() {
-        return this._audioCtx.currentTime - this._currentAudioSource.start_time;
+        return (this._audioCtx.currentTime - this._currentAudioSource.start_time) * this._rate + this._offset;
+    }
+
+    // ===== 游玩设置 =====
+    set_offset(ms) {
+        this._offset = ms / 1000;
+    }
+
+    set_rate(x) {
+        this._rate = x;
+        if (this._currentAudioSource) {
+            this._currentAudioSource.playbackRate.value = x;
+        }
+    }
+
+    get_offset() {
+        return Math.round(this._offset * 1000);
+    }
+
+    get_rate() {
+        return this._rate;
     }
 
     render() {

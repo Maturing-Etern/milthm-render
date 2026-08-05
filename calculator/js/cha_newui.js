@@ -57,6 +57,49 @@ function startProcess() {
   }
 }
 var shitValue = 0.114514;
+
+/* ========== 等级工具函数 ==========
+ * bestLevel 编码（saves.db bl 值与 data.db 统一后的含义）：
+ *  0=unplayed  1=APSS  2=FCSS  3=APS  4=FCS  5=APA  6=FCA
+ *  7=A  8=B  9=C  10=F  11=M  12=S  13=SS  14=APM
+ *  15=APB  16=APC  17=APF  18=FCB  19=FCC  20=FCF  21=FCM  22=R
+ */
+const GRADE_ICON_NAMES = {
+  0:'F',    1:'APSS', 2:'FCSS', 3:'APS',  4:'FCS',
+  5:'APA',  6:'FCA',  7:'A',    8:'B',    9:'C',
+  10:'F',   11:'M',   12:'S',   13:'SS',  14:'APM',
+  15:'APB', 16:'APC', 17:'APF', 18:'FCB', 19:'FCC',
+  20:'FCF', 21:'FCM', 22:'R'
+};
+function getGradeIconName(bl) { return GRADE_ICON_NAMES[bl] || 'F'; }
+// AP 等级：bl 奇数且 1-5（1=APSS, 3=APS, 5=APA）
+function isAPGrade(bl) { return bl >= 1 && bl <= 5 && (bl % 2) === 1; }
+// FC 等级：bl 偶数且 2-6（2=FCSS, 4=FCS, 6=FCA）
+function isFCGrade(bl) { return bl >= 2 && bl <= 6 && (bl % 2) === 0; }
+// data.db grade 字符串 + 分数 → 统一 bestLevel 编码
+function gradeDBToLevel(grade, score) {
+  if (grade === 'R' || grade === 'APM') return 1;
+  if (grade === 'AP') {
+    if (score >= 1000000) return 1;
+    if (score >= 950000)  return 3;
+    if (score >= 900000)  return 5;
+    if (score >= 800000)  return 15;
+    if (score >= 700000)  return 16;
+    return 17;
+  }
+  if (grade === 'FCM') return 2;
+  if (grade === 'FC') {
+    if (score >= 1000000) return 2;
+    if (score >= 950000)  return 4;
+    if (score >= 900000)  return 6;
+    if (score >= 800000)  return 18;
+    if (score >= 700000)  return 19;
+    return 20;
+  }
+  const m = { M:11, SS:13, S:12, A:7, B:8, C:9, F:10 };
+  return m[grade] ?? 10;
+}
+
 /* ========== 核心流程 ========== */
 function processData() {
   const inputData = document.getElementById('inputData').value.replace(/\n/g, '').replace(/  /g, '');
@@ -448,15 +491,15 @@ function drawCard(result, index) {
   score.style.marginBottom = `${marginBottom}px`;
   score.style.whiteSpace = 'nowrap';
   score.style.overflow = 'ellipsis';
-  // 根据等级分数渐变
-  if (result.bestLevel < 3) {
+  // 根据等级分数渐变（isAPGrade: bl 1,3,5；isFCGrade: bl 2,4,6）
+  if (isAPGrade(result.bestLevel)) {
     Object.assign(score.style, {
       background: 'linear-gradient(to right, #12a9fb, #ee80ff)',
       color: 'transparent',
       backgroundClip: 'text',
       WebkitBackgroundClip: 'text'
     });
-  } else if (result.bestLevel < 5) {
+  } else if (isFCGrade(result.bestLevel)) {
     Object.assign(score.style, {
       background: 'linear-gradient(to right, #5e94f3, #80b2ff)',
       color: 'transparent',
@@ -695,14 +738,13 @@ function calculateUserReality(scores) {
       lastUserReality = userreality;
     }
   });
-  const gradeMap = { R: 0, APM: 1, AP: 2, FCM: 3, FC: 4, M: 5, S: 6, A: 7, B: 8, C: 9, F: 10 };
   window.items = Array.from(b20_lg.values()).map(({ score, singleReality, score_accuracy, grade, ...rest }) => ({
     ...rest,
     bestScore: score,
     singleRealityRaw: singleReality,
     singleReality: singleReality.toFixed(2),
     bestAccuracy: score_accuracy,
-    bestLevel: gradeMap[grade] ?? 10 // 默认 F 等级
+    bestLevel: gradeDBToLevel(grade, score) // 统一编码，与 saves.db bl 值一致
   }));
   return userrealityHistory;
 }
@@ -933,12 +975,12 @@ function lg_drawCards(ctx, items, xOffset, yOffset) {
     let strScore = item.score.toString().padStart(7, '0');
     // 分数颜色
     let scoreColor;
-    if (item.bestLevel < 3) {
+    if (isAPGrade(item.bestLevel)) {
       const gradient = ctx.createLinearGradient(x, y + 40 * scale, x, y + 70 * scale);
       gradient.addColorStop(0, '#99C5FB');
       gradient.addColorStop(1, '#D8C3FA');
       scoreColor = gradient;
-    } else if (item.bestLevel < 5) {
+    } else if (isFCGrade(item.bestLevel)) {
       scoreColor = '#90CAEF';
     } else {
       scoreColor = '#FFFFFF';
@@ -1083,7 +1125,7 @@ function downloadImage() {
       const items = [...window.processedItems.slice(0, actualCardCount), ...window.norlt];
       Promise.all(items.map(i => Promise.all([
         loadImage(`./jpgs/${encodeURIComponent(i.name.replace(/[#?]/g, ''))}.jpg`).catch(() => loadImage('./jpgs/NYA.jpg')),
-        loadImage(`./jpgs/${i.bestLevel}.png`).catch(() => null),
+        loadImage(`./icons/${getGradeIconName(i.bestLevel)}.png`).catch(() => null),
         ol_runner(ol_updateImgGenProcess,['正在加载图片 For '+i.name]),
       ]))).then(imgs => drawCards(ctx, canvas, items, imgs));
       ol_runner(ol_updateImgGenProcess,['完成']);
@@ -1113,14 +1155,14 @@ function drawCards(ctx, canvas, items, images) {
     // 分数（含渐变颜色）
     const scoreStr = it.bestScore.toString().padStart(7, '0');
     let scoreClr =
-      it.bestLevel < 3
+      isAPGrade(it.bestLevel)
         ? (() => {
           const g = ctx.createLinearGradient(x, y + 52, x, y + 91);
           g.addColorStop(0, '#99C5FB');
           g.addColorStop(1, '#D8C3FA');
           return g;
         })()
-        : it.bestLevel < 5
+        : isFCGrade(it.bestLevel)
           ? '#90CAEF'
           : '#FFFFFF';
 

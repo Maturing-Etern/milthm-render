@@ -22,7 +22,7 @@
         <div class="controls">
             <label class="upload-btn">
                 📁 选择谱面
-                <input type="file" id="file-input" accept=".zip,.json,.txt,.xml,.reg,.db,.png">
+                <input type="file" id="file-input" accept=".zip,.json">
             </label>
             <span id="fileName" class="file-info">未选择文件</span>
 
@@ -54,6 +54,8 @@
                 <button id="stopBtn" class="action-btn stop" title="结束播放">⏹️ 停止</button>
             </div>
 
+            <button id="libraryBtn" class="info-link" title="曲库（收藏/最近/成绩）">📚 曲库</button>
+            <button id="settingsBtn" class="info-link" title="游玩设置">⚙️ 设置</button>
             <button id="infoBtn" class="info-link">📋 格式说明</button>
         </div>
     </div>
@@ -64,10 +66,10 @@
             <!-- 游戏画布将放置在这里 -->
             <canvas id="main-canvas" style="display: none; max-width: 100%; max-height: 100%;"></canvas>
             <!-- 初始提示 -->
-            <div id="initialPrompt" style="text-align: center; color: rgba(44,62,80,0.45);padding: 2rem;">
+            <div id="initialPrompt" style="text-align: center; color: rgba(200,196,240,0.55);padding: 2rem;">
                 <div style="font-size: 3rem; margin-bottom: 1rem;">🎵</div>
                 <p style="font-size: 1.05rem;font-weight:500;color:#2c3e50;">选择 Milthm 谱面文件开始游玩</p>
-                <p style="font-size: 0.8rem; margin-top: 0.5rem;color:rgba(0,0,0,0.45);">支持 .zip / .json / .txt / .xml / .reg / .db / .png</p>
+                <p style="font-size: 0.8rem; margin-top: 0.5rem;color:rgba(0,0,0,0.45);">支持 .zip / .json 格式</p>
             </div>
         </div>
     </div>
@@ -83,19 +85,108 @@
 <div id="infoModal" class="modal">
     <div class="modal-content">
         <h3>📋 谱面格式要求</h3>
-        <p>MilLune Player 支持 <strong>Milthm 标准格式</strong> 的谱面包。</p>
+        <p>MilLune Player 需要 <strong>Milthm 标准格式</strong> 的谱面包。</p>
         <p>ZIP 文件必须包含：</p>
-        <p>• <code>meta.json</code> - 谱面元数据（或 <code>info.json</code>）</p>
+        <p>• <code>meta.json</code> - 谱面元数据</p>
         <p>• <code>music.ogg</code> 或 <code>music.mp3</code> - 音频文件</p>
-        <p>• <code>chart/*.json</code> / <code>*.txt</code> / <code>*.xml</code> / <code>*.reg</code> / <code>*.db</code> / <code>*.png</code> - 谱面数据</p>
+        <p>• <code>chart/*.json</code> - 谱面数据</p>
         <p style="margin-top: 1rem;">💡 提示：使用 Rain Editor 导出谱面</p>
         <button class="modal-close" id="closeModal">明白了</button>
     </div>
 </div>
 
+<!-- 设置弹窗 -->
+<div id="settingsModal" class="modal">
+    <div class="modal-content settings-content">
+        <h3>⚙️ 游玩设置</h3>
+
+        <div class="setting-row">
+            <div class="setting-label">
+                <span class="setting-name">⏱️ 延迟调整</span>
+                <span class="setting-desc">音画同步微调（毫秒，正=判定提前）</span>
+            </div>
+            <div class="setting-input">
+                <input type="range" id="setting-offset" min="-300" max="300" step="10" value="0">
+                <span class="setting-value" id="setting-offset-val">0ms</span>
+            </div>
+        </div>
+
+        <div class="setting-row">
+            <div class="setting-label">
+                <span class="setting-name">⏩ 游玩倍速</span>
+                <span class="setting-desc">0.5x ~ 2.0x</span>
+            </div>
+            <div class="setting-input">
+                <input type="range" id="setting-rate" min="0.5" max="2" step="0.05" value="1">
+                <span class="setting-value" id="setting-rate-val">1.00x</span>
+            </div>
+        </div>
+
+        <div class="setting-row">
+            <div class="setting-label">
+                <span class="setting-name">🌙 背景亮度</span>
+                <span class="setting-desc">调整背景明暗</span>
+            </div>
+            <div class="setting-input">
+                <input type="range" id="setting-brightness" min="30" max="100" step="5" value="60">
+                <span class="setting-value" id="setting-brightness-val">60%</span>
+            </div>
+        </div>
+
+        <div class="setting-row">
+            <div class="setting-label">
+                <span class="setting-name">🤖 自动演示</span>
+                <span class="setting-desc">开启后自动游玩谱面</span>
+            </div>
+            <div class="setting-input">
+                <label class="toggle">
+                    <input type="checkbox" id="setting-autoplay">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <button class="modal-close" id="closeSettingsModal">保存</button>
+    </div>
+</div>
+
+<!-- 曲库弹窗 -->
+<div id="libraryModal" class="modal">
+    <div class="modal-content library-content">
+        <h3>📚 曲库</h3>
+
+        <div class="library-tabs">
+            <button class="library-tab active" data-tab="fav">⭐ 收藏</button>
+            <button class="library-tab" data-tab="recent">🕒 最近</button>
+            <button class="library-tab" data-tab="scores">🏆 成绩</button>
+        </div>
+
+        <div class="library-body">
+            <div id="lib-fav" class="library-pane active">
+                <p class="library-empty" id="fav-empty">还没有收藏的谱面。<br>游玩时点击「⭐ 收藏」即可保存到曲库。</p>
+                <div id="fav-list" class="library-list"></div>
+            </div>
+            <div id="lib-recent" class="library-pane">
+                <p class="library-empty" id="recent-empty">还没有游玩记录。</p>
+                <div id="recent-list" class="library-list"></div>
+            </div>
+            <div id="lib-scores" class="library-pane">
+                <div class="b20-card">
+                    <div class="b20-title">B20</div>
+                    <div class="b20-value" id="b20-value">--</div>
+                    <div class="b20-sub" id="b20-sub">暂无成绩数据</div>
+                </div>
+                <div id="score-list" class="library-list"></div>
+            </div>
+        </div>
+
+        <button class="modal-close" id="closeLibraryModal">关闭</button>
+    </div>
+</div>
+
 <!-- Level选择弹窗 -->
 <div id="level-select-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center;">
-    <div id="level-select-content" style="background: white; padding: 2rem; border-radius: var(--radius-lg); max-width: 500px; width: 90%;">
+    <div id="level-select-content" style="padding: 2rem; border-radius: var(--radius-lg); max-width: 500px; width: 90%;">
         <h3>选择难度</h3>
         <div id="level-list"></div>
     </div>
@@ -169,6 +260,7 @@
 
             <!-- 按钮 -->
             <div class="result-actions">
+                <button id="resultFavBtn" class="result-btn fav-btn">⭐ 收藏本曲</button>
                 <button id="resultRetryBtn" class="result-btn retry-btn">再来一次</button>
                 <button id="resultCloseBtn" class="result-btn close-btn">关闭</button>
             </div>
@@ -187,12 +279,12 @@
     const canvas = document.getElementById('rain-canvas');
     const ctx = canvas.getContext('2d', { alpha: true });
 
-    // 预计算颜色池（避免每帧创建字符串）
+    // 预计算颜色池（避免每帧创建字符串）—— 紫雨之夜主题
     const COLOR_POOL = [
-        'rgba(142,197,252,',
-        'rgba(41,168,185,',
-        'rgba(128,178,228,',
-        'rgba(180,215,235,'
+        'rgba(167,139,250,',   // 淡紫雨
+        'rgba(96,165,250,',    // 蓝紫雨
+        'rgba(139,92,246,',    // 深紫雨
+        'rgba(196,181,253,'    // 紫白雨
     ];
     const COLOR_SUFFIX = ')';
 
@@ -393,6 +485,29 @@
         if (!isTheaterMode) return;
         if (e.clientY < 80 || e.clientY > window.innerHeight - 80) showControls();
     });
+
+    // ========== 移动端触屏适配 ==========
+    // 触屏点按唤出/收起控件（手机上无鼠标，不能依赖 mousemove）
+    let isTouchEnv = false;
+    document.addEventListener('touchstart', () => { isTouchEnv = true; }, { passive: true });
+
+    document.addEventListener('touchstart', (e) => {
+        if (!isTheaterMode) return;
+        // 点按控件本身不处理
+        if (e.target.closest && (e.target.closest('.navbar') || e.target.closest('.status-bar'))) return;
+        if (navbar.classList.contains('show')) {
+            navbar.classList.remove('show');
+            statusBar.classList.remove('show');
+            if (hideControlsTimeout) clearTimeout(hideControlsTimeout);
+        } else {
+            // 触屏显示后不自动隐藏，避免游玩时控件闪烁
+            navbar.classList.add('show');
+            statusBar.classList.add('show');
+            if (hideControlsTimeout) clearTimeout(hideControlsTimeout);
+        }
+    }, { passive: true });
+
+    // 触屏设备上全屏按钮也通过点按切换
     fullscreenBtn.addEventListener('click', toggleTheaterMode);
     
     document.addEventListener('keydown', (e) => {
@@ -436,6 +551,334 @@
     document.getElementById('infoBtn').onclick = () => modal.classList.add('show');
     document.getElementById('closeModal').onclick = () => modal.classList.remove('show');
     modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('show'); };
+
+    // ========== 游玩设置面板 ==========
+    const settingsModal = document.getElementById('settingsModal');
+    const sOffset = document.getElementById('setting-offset');
+    const sRate = document.getElementById('setting-rate');
+    const sBrightness = document.getElementById('setting-brightness');
+    const sAutoplay = document.getElementById('setting-autoplay');
+    const PLAYER_SETTINGS_KEY = 'milune_player_settings_v1';
+
+    // 默认设置
+    const defaultSettings = { offset: 0, rate: 1, brightness: 60, autoplay: false };
+
+    // 读取已保存设置
+    function loadSettings() {
+        try {
+            const saved = JSON.parse(localStorage.getItem(PLAYER_SETTINGS_KEY) || '{}');
+            return Object.assign({}, defaultSettings, saved);
+        } catch (e) {
+            return Object.assign({}, defaultSettings);
+        }
+    }
+
+    function saveSettings() {
+        localStorage.setItem(PLAYER_SETTINGS_KEY, JSON.stringify({
+            offset: parseInt(sOffset.value, 10),
+            rate: parseFloat(sRate.value),
+            brightness: parseInt(sBrightness.value, 10),
+            autoplay: sAutoplay.checked
+        }));
+    }
+
+    // 应用设置（UI + 引擎 + 背景）
+    function applySettings() {
+        const s = loadSettings();
+        sOffset.value = s.offset;
+        sRate.value = s.rate;
+        sBrightness.value = s.brightness;
+        sAutoplay.checked = s.autoplay;
+        document.getElementById('setting-offset-val').textContent = s.offset + 'ms';
+        document.getElementById('setting-rate-val').textContent = s.rate.toFixed(2) + 'x';
+        document.getElementById('setting-brightness-val').textContent = s.brightness + '%';
+        els.checkAutoplay.checked = s.autoplay;
+        applyBrightness(s.brightness);
+        // 若播放器实例已存在，立即应用引擎设置
+        if (state.playerInstance) {
+            state.playerInstance.set_offset(s.offset);
+            state.playerInstance.set_rate(s.rate);
+        }
+    }
+
+    // 背景亮度
+    function applyBrightness(pct) {
+        const bg = document.querySelector('.static-bg');
+        if (bg) bg.style.filter = `brightness(${pct / 100}) saturate(1.15) hue-rotate(15deg)`;
+        const overlay = document.querySelector('.bg-overlay');
+        if (overlay) overlay.style.opacity = (pct / 100).toFixed(2);
+    }
+
+    document.getElementById('settingsBtn').onclick = () => {
+        // 打开时同步当前引擎值
+        if (state.playerInstance) {
+            sOffset.value = state.playerInstance.get_offset();
+            sRate.value = state.playerInstance.get_rate();
+            document.getElementById('setting-offset-val').textContent = sOffset.value + 'ms';
+            document.getElementById('setting-rate-val').textContent = parseFloat(sRate.value).toFixed(2) + 'x';
+        }
+        settingsModal.classList.add('show');
+    };
+    document.getElementById('closeSettingsModal').onclick = () => {
+        saveSettings();
+        settingsModal.classList.remove('show');
+    };
+    settingsModal.onclick = (e) => { if (e.target === settingsModal) { saveSettings(); settingsModal.classList.remove('show'); } };
+
+    // slider 实时联动
+    sOffset.addEventListener('input', () => {
+        document.getElementById('setting-offset-val').textContent = sOffset.value + 'ms';
+        if (state.playerInstance) state.playerInstance.set_offset(parseInt(sOffset.value, 10));
+    });
+    sRate.addEventListener('input', () => {
+        document.getElementById('setting-rate-val').textContent = parseFloat(sRate.value).toFixed(2) + 'x';
+        if (state.playerInstance) state.playerInstance.set_rate(parseFloat(sRate.value));
+    });
+    sBrightness.addEventListener('input', () => {
+        document.getElementById('setting-brightness-val').textContent = sBrightness.value + '%';
+        applyBrightness(parseInt(sBrightness.value, 10));
+    });
+    sAutoplay.addEventListener('change', () => {
+        els.checkAutoplay.checked = sAutoplay.checked;
+    });
+
+    // 启动时应用已保存设置
+    applySettings();
+
+    // ========== 曲库（收藏 / 最近 / 成绩 B20）==========
+    // --- IndexedDB 封装：存储谱面 zip Blob ---
+    const DB_NAME = 'milune_player_db';
+    const DB_VER = 1;
+    let dbInstance = null;
+
+    function openDB() {
+        return new Promise((resolve, reject) => {
+            if (dbInstance) return resolve(dbInstance);
+            const req = indexedDB.open(DB_NAME, DB_VER);
+            req.onupgradeneeded = () => {
+                const db = req.result;
+                if (!db.objectStoreNames.contains('charts')) {
+                    db.createObjectStore('charts', { keyPath: 'name' });
+                }
+            };
+            req.onsuccess = () => { dbInstance = req.result; resolve(dbInstance); };
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async function idbPutChart(name, blob, meta) {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction('charts', 'readwrite');
+            tx.objectStore('charts').put({ name, blob, meta, savedAt: Date.now() });
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        });
+    }
+
+    async function idbGetChart(name) {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction('charts', 'readonly');
+            const req = tx.objectStore('charts').get(name);
+            req.onsuccess = () => resolve(req.result || null);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async function idbDeleteChart(name) {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction('charts', 'readwrite');
+            tx.objectStore('charts').delete(name);
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        });
+    }
+
+    async function idbAllCharts() {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction('charts', 'readonly');
+            const req = tx.objectStore('charts').getAll();
+            req.onsuccess = () => resolve(req.result || []);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    // --- localStorage：收藏标记 / 最近游玩 / 成绩 ---
+    const RECENT_KEY = 'milune_recent_v1';
+    const SCORES_KEY = 'milune_scores_v1';
+
+    function getRecent() {
+        try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch (e) { return []; }
+    }
+    function saveRecent(list) {
+        localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(0, 20)));
+    }
+    function addRecent(name, song, diff) {
+        const list = getRecent().filter(r => r.name !== name);
+        list.unshift({ name, song, diff, time: Date.now() });
+        saveRecent(list);
+    }
+
+    function getScores() {
+        try { return JSON.parse(localStorage.getItem(SCORES_KEY) || '[]'); } catch (e) { return []; }
+    }
+    function saveScores(list) {
+        localStorage.setItem(SCORES_KEY, JSON.stringify(list.slice(0, 200)));
+    }
+    function addScore(rec) {
+        const list = getScores();
+        list.unshift(rec);
+        saveScores(list);
+    }
+
+    // --- 曲库 UI ---
+    const libraryModal = document.getElementById('libraryModal');
+    const favList = document.getElementById('fav-list');
+    const recentList = document.getElementById('recent-list');
+    const scoreList = document.getElementById('score-list');
+
+    // 当前加载的谱面（用于收藏）
+    let currentChartName = null;
+    let currentChartBlob = null;
+
+    document.getElementById('libraryBtn').onclick = () => {
+        renderLibrary();
+        libraryModal.classList.add('show');
+    };
+    document.getElementById('closeLibraryModal').onclick = () => libraryModal.classList.remove('show');
+    libraryModal.onclick = (e) => { if (e.target === libraryModal) libraryModal.classList.remove('show'); };
+
+    // Tab 切换
+    document.querySelectorAll('.library-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.library-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.library-pane').forEach(p => p.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById('lib-' + tab.dataset.tab).classList.add('active');
+        });
+    });
+
+    function renderLibrary() {
+        renderFavs();
+        renderRecents();
+        renderScores();
+    }
+
+    async function renderFavs() {
+        const charts = await idbAllCharts();
+        favList.innerHTML = '';
+        document.getElementById('fav-empty').style.display = charts.length ? 'none' : 'block';
+        charts.sort((a, b) => b.savedAt - a.savedAt);
+        charts.forEach(chart => {
+            const div = document.createElement('div');
+            div.className = 'library-item';
+            const meta = chart.meta || {};
+            div.innerHTML = `
+                <div class="library-item-info">
+                    <div class="library-item-name">🎵 ${escapeHtml(chart.name)}</div>
+                    ${meta.song ? `<div class="library-item-sub">${escapeHtml(meta.song)}${meta.diff ? ' · ' + escapeHtml(meta.diff) : ''}</div>` : ''}
+                </div>
+                <div class="library-item-actions">
+                    <button class="lib-btn play">▶ 加载</button>
+                    <button class="lib-btn del" title="取消收藏">✕</button>
+                </div>`;
+            div.querySelector('.play').onclick = () => loadChartFromBlob(chart.name, chart.blob, meta);
+            div.querySelector('.del').onclick = async () => {
+                await idbDeleteChart(chart.name);
+                renderFavs();
+            };
+            favList.appendChild(div);
+        });
+    }
+
+    function renderRecents() {
+        const list = getRecent();
+        recentList.innerHTML = '';
+        document.getElementById('recent-empty').style.display = list.length ? 'none' : 'block';
+        list.forEach(r => {
+            const div = document.createElement('div');
+            div.className = 'library-item';
+            div.innerHTML = `
+                <div class="library-item-info">
+                    <div class="library-item-name">🎵 ${escapeHtml(r.song || r.name)}</div>
+                    <div class="library-item-sub">${escapeHtml(r.name)}${r.diff ? ' · ' + escapeHtml(r.diff) : ''} · ${formatTime(r.time)}</div>
+                </div>`;
+            div.querySelector('.library-item-info').onclick = async () => {
+                const chart = await idbGetChart(r.name);
+                if (chart) loadChartFromBlob(chart.name, chart.blob, chart.meta || {});
+                else alert('该谱面已从曲库移除，请重新选择文件');
+            };
+            recentList.appendChild(div);
+        });
+    }
+
+    function renderScores() {
+        const list = getScores();
+        scoreList.innerHTML = '';
+        // B20 计算：取 acc 最高的 20 条求平均
+        const accs = list.filter(r => r.acc != null).map(r => r.acc).sort((a, b) => b - a).slice(0, 20);
+        const b20Val = document.getElementById('b20-value');
+        const b20Sub = document.getElementById('b20-sub');
+        if (accs.length) {
+            const avg = accs.reduce((s, a) => s + a, 0) / accs.length;
+            b20Val.textContent = avg.toFixed(2) + '%';
+            b20Sub.textContent = `基于 ${accs.length} 条最高 acc 记录`;
+        } else {
+            b20Val.textContent = '--';
+            b20Sub.textContent = '暂无成绩数据';
+        }
+        if (!list.length) {
+            document.getElementById('score-list').innerHTML = '<p class="library-empty">还没有成绩记录。</p>';
+            return;
+        }
+        list.slice(0, 50).forEach(r => {
+            const div = document.createElement('div');
+            div.className = 'library-item';
+            const gradeCls = getGradeClass(r.grade);
+            div.innerHTML = `
+                <div class="library-item-info">
+                    <div class="library-item-name">🎵 ${escapeHtml(r.song || '未知曲目')} <span class="score-grade ${gradeCls}">${escapeHtml(r.grade || '-')}</span></div>
+                    <div class="library-item-sub">${escapeHtml(r.diff || '')} · ${r.score != null ? r.score : '-'} 分 · ${r.acc != null ? r.acc.toFixed(2) + '%' : '-'} · ${formatTime(r.time)}</div>
+                </div>`;
+            scoreList.appendChild(div);
+        });
+    }
+
+    // 从 IndexedDB 加载谱面
+    async function loadChartFromBlob(name, blob, meta) {
+        libraryModal.classList.remove('show');
+        const file = new File([blob], name, { type: blob.type || 'application/zip' });
+        state.chartFile = file;
+        state.isZipMode = true;
+        state.zipType = 'zip';
+        state.zipFiles = null;
+        state.storyboardAssets.clear();
+        currentChartName = name;
+        currentChartBlob = blob;
+        updateFileBtn(`📄 ${name}`);
+        // 走 zip 解析流程
+        await handleZip(file);
+    }
+
+    function escapeHtml(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function formatTime(ts) {
+        const d = new Date(ts);
+        return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    }
+
+    function getGradeClass(g) {
+        if (!g) return '';
+        if (g.includes('S')) return 'grade-s';
+        if (g.includes('A')) return 'grade-a';
+        if (g.includes('B')) return 'grade-b';
+        return 'grade-c';
+    }
 
     // ========== 状态管理 ==========
     const state = {
@@ -638,15 +1081,15 @@
             levels.forEach((level, index) => {
                 const item = document.createElement('div');
                 item.className = 'level-item';
-                item.style.cssText = 'padding: 1rem; margin: 0.5rem 0; background: #f5f7fa; border-radius: 0.5rem; cursor: pointer;';
+                item.style.cssText = 'padding: 1rem; margin: 0.5rem 0; background: rgba(167,139,250,0.06); border-radius: 0.5rem; cursor: pointer;';
                 
                 const diff = level.Difficulty || 'Unknown';
                 const mapper = level.Beatmapper || 'Unknown';
                 const diffValue = level.DifficultyValue || 0;
                 
                 item.innerHTML = `
-                    <div style="font-weight: bold; color: #2c3e50;">${diff} ${diffValue > 0 ? diffValue.toFixed(1) : ''}</div>
-                    <div style="font-size: 0.9rem; color: #7f8c8d;">谱师: ${mapper}</div>
+                    <div style="font-weight: bold; color: #e8e6f7;">${diff} ${diffValue > 0 ? diffValue.toFixed(1) : ''}</div>
+                    <div style="font-size: 0.9rem; color: #9a95c0;">谱师: ${mapper}</div>
                 `;
                 
                 item.addEventListener('click', () => {
@@ -691,41 +1134,36 @@
                 };
 
                 const chartBlob = await getZipFile(meta.chart_file).async("blob");
-                // 尝试读取谱面元数据（兼容 JSON 和非 JSON 格式）
-                // 非 JSON 谱面（.xml/.txt/.reg/.db/.png）解析会失败，但不影响加载
-                try {
-                    const chartText = await getZipFile(meta.chart_file).async("string");
-                    const chartJson = JSON.parse(chartText);
-                    state.chartInfo = chartJson.meta || chartJson;
-                    let totalNotes = 0;
-                    if (Array.isArray(chartJson)) {
-                        totalNotes = chartJson.filter(item => item && item.type === 0).length;
-                    } else if (chartJson.events && Array.isArray(chartJson.events)) {
-                        totalNotes = chartJson.events.filter(item => item && item.type === 0).length;
-                    } else {
-                        for (const key in chartJson) {
-                            if (Array.isArray(chartJson[key])) {
-                                const arr = chartJson[key];
-                                if (arr.length > 0 && arr[0].type !== undefined) {
-                                    totalNotes = arr.filter(item => item && item.type === 0).length;
-                                    break;
-                                }
+                // 读取主JSON的谱面信息
+                const chartText = await getZipFile(meta.chart_file).async("string");
+                const chartJson = JSON.parse(chartText);
+                // 谱面信息在 meta 对象中，如果存在则使用，否则回退到整个 JSON
+                state.chartInfo = chartJson.meta || chartJson;
+                // 计算总物量（可击打音符数量）
+                let totalNotes = 0;
+                if (Array.isArray(chartJson)) {
+                    totalNotes = chartJson.filter(item => item && item.type === 0).length;
+                } else if (chartJson.events && Array.isArray(chartJson.events)) {
+                    totalNotes = chartJson.events.filter(item => item && item.type === 0).length;
+                } else {
+                    // 尝试遍历所有顶级属性，查找数组
+                    for (const key in chartJson) {
+                        if (Array.isArray(chartJson[key])) {
+                            const arr = chartJson[key];
+                            // 假设第一个元素有type字段
+                            if (arr.length > 0 && arr[0].type !== undefined) {
+                                totalNotes = arr.filter(item => item && item.type === 0).length;
+                                break;
                             }
                         }
                     }
-                    state.chartInfo.totalNotes = totalNotes;
-                } catch (e) {
-                    // 非 JSON 谱面格式：跳过元数据提取，谱面仍可正常加载
-                    state.chartInfo = {};
                 }
+                state.chartInfo.totalNotes = totalNotes;
 
                 const audioBlob = meta.audio_file ? await getZipFile(meta.audio_file).async("blob") : null;
                 const illuBlob = meta.image_file ? await getZipFile(meta.image_file).async("blob") : null;
 
-                // 根据文件扩展名确定 MIME 类型
-                const chartExt = meta.chart_file.slice(meta.chart_file.lastIndexOf('.')).toLowerCase();
-                const mimeMap = { '.json':'application/json','.txt':'text/plain','.xml':'text/xml','.db':'application/octet-stream','.png':'image/png','.reg':'text/plain' };
-                state.chartFile = new File([chartBlob], meta.chart_file, {type: mimeMap[chartExt] || 'application/octet-stream'});
+                state.chartFile = new File([chartBlob], meta.chart_file, {type: "application/json"});
                 state.audioFile = audioBlob ? new File([audioBlob], meta.audio_file, {type: "audio/mpeg"}) : null;
                 state.illuFile = illuBlob ? new File([illuBlob], meta.image_file, {type: "image/png"}) : null;
                 state.zipType = 'meta';
@@ -778,11 +1216,7 @@
                 const audioBlob = audioZipFile ? await audioZipFile.async("blob") : null;
                 const illuBlob = illuZipFile ? await illuZipFile.async("blob") : null;
 
-                // 根据 FileMap.beatmap 的实际文件名和扩展名构建 File
-                const chartName = fileMap.beatmap.split('/').pop() || 'beatmap.unknown';
-                const chartExt = chartName.slice(chartName.lastIndexOf('.')).toLowerCase();
-                const mimeMapInfo = { '.json':'application/json','.txt':'text/plain','.xml':'text/xml','.db':'application/octet-stream','.png':'image/png','.reg':'text/plain' };
-                state.chartFile = new File([chartBlob], chartName, {type: mimeMapInfo[chartExt] || 'application/octet-stream'});
+                state.chartFile = new File([chartBlob], "beatmap.json", {type: "application/json"});
                 state.audioFile = audioBlob ? new File([audioBlob], "song.ogg", {type: "audio/ogg"}) : null;
                 state.illuFile = illuBlob ? new File([illuBlob], "illu.png", {type: "image/png"}) : null;
 
@@ -819,12 +1253,17 @@
         if (!file) return;
 
         if (file.name.endsWith('.zip')) {
+            // 记录当前谱面（可收藏）
+            currentChartName = file.name;
+            currentChartBlob = file;
             await handleZip(file);
         } else {
             state.chartFile = file;
             state.isZipMode = false;
             state.zipType = null;
             state.storyboardAssets.clear();
+            currentChartName = file.name;
+            currentChartBlob = file;
             updateFileBtn(`📄 ${file.name}`);
             checkReady();
         }
@@ -840,6 +1279,10 @@
 
     async function startGame() {
         if (!state.chartFile) return;
+
+        // 标记游戏进行中，开启横屏提示
+        gameActive = true;
+        checkOrientation();
 
         // 显示加载遮罩
         els.loading.style.display = 'flex';
@@ -886,7 +1329,9 @@
                 fontFam: "milFont",
                 pauseBtnPath: "./resources/milres/buttons/light/pause.png",
                 storyboardTextureLoader: storyboardTextureLoader,
-                isAutoplay: els.checkAutoplay.checked
+                isAutoplay: els.checkAutoplay.checked,
+                offset: parseInt(sOffset.value, 10) / 1000,
+                rate: parseFloat(sRate.value)
             });
 
             await state.playerInstance.init();
@@ -939,6 +1384,10 @@
     }
 
     function quitGame() {
+        // 游戏结束，关闭横屏提示
+        gameActive = false;
+        checkOrientation();
+
         // 收集结算数据 - 多级回退策略
         let completionStats = null;
 
@@ -1297,6 +1746,21 @@
             els.resultGradeVal.classList.add('grade-' + grade.replace(/\s+/g, '-'));
         }
 
+        // ========== 记录成绩 + 最近游玩 ==========
+        try {
+            const rec = {
+                song: songName || (state.chartInfo && state.chartInfo.name) || currentChartName || '未知曲目',
+                diff: diffName || (state.currentLevel && state.currentLevel.Difficulty) || '',
+                score: score,
+                acc: Math.floor(displayAccuracy * 100) / 100,
+                grade: grade,
+                maxCombo: stats.maxCombo || 0,
+                time: Date.now()
+            };
+            addScore(rec);
+            if (currentChartName) addRecent(currentChartName, rec.song, rec.diff);
+        } catch (err) { /* 成绩记录失败不影响游玩 */ }
+
         // 加成
         if (els.resultBonus) {
             if (bonus > 0) {
@@ -1364,41 +1828,6 @@
         // 清理雨滴
         const drops = document.getElementById('rainDrops');
         if (drops) drops.innerHTML = '';
-
-        // 停止并销毁播放器实例
-        if (state.playerInstance) {
-            if (typeof state.playerInstance.stop === 'function') {
-                state.playerInstance.stop();
-            }
-            if (state.playerInstance.destroy) {
-                state.playerInstance.destroy();
-            }
-            state.playerInstance = null;
-        }
-
-        // 隐藏画布，恢复初始提示
-        els.canvas.style.display = 'none';
-        els.initialPrompt.style.display = 'block';
-
-        // 清理加载遮罩
-        els.loading.style.display = 'none';
-
-        // 重置结算相关状态
-        state.autoResultShown = false;
-        state.completionStats = null;
-
-        // 移除 resize 监听
-        window.removeEventListener('resize', resizeGameCanvas);
-
-        // 退出全屏
-        if (document.fullscreenElement) {
-            document.exitFullscreen();
-        }
-
-        // 退出剧场模式
-        if (isTheaterMode) {
-            toggleTheaterMode();
-        }
     }
 
     // 按钮绑定
@@ -1421,6 +1850,27 @@
             startGame();
         });
     }
+    // 收藏当前谱面
+    const resultFavBtn = document.getElementById('resultFavBtn');
+    if (resultFavBtn) {
+        resultFavBtn.addEventListener('click', async () => {
+            if (!currentChartName || !currentChartBlob) {
+                alert('没有可收藏的谱面');
+                return;
+            }
+            const meta = {
+                song: (state.chartInfo && state.chartInfo.name) || '',
+                diff: (state.currentLevel && state.currentLevel.Difficulty) || ''
+            };
+            try {
+                await idbPutChart(currentChartName, currentChartBlob, meta);
+                resultFavBtn.textContent = '✅ 已收藏';
+                resultFavBtn.disabled = true;
+            } catch (err) {
+                alert('收藏失败: ' + err.message);
+            }
+        });
+    }
 
 
     // 比例控制事件
@@ -1431,9 +1881,33 @@
         if (w && h && !isNaN(w) && !isNaN(h) && Number(h) > 0) setRatio(`${w}:${h}`);
     });
 
+    // ========== 移动端横屏提示 ==========
+    let gameActive = false; // 仅在游玩中提示
+    const rotateOverlay = document.getElementById('rotate-overlay');
+
+    function checkOrientation() {
+        if (!rotateOverlay) return;
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(navigator.userAgent);
+        const isPortrait = window.matchMedia('(orientation: portrait)').matches;
+        if (gameActive && isMobile && isPortrait) {
+            rotateOverlay.style.display = 'flex';
+        } else {
+            rotateOverlay.style.display = 'none';
+        }
+    }
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('orientationchange', checkOrientation);
+
 
 })();
 </script>
+
+<!-- 移动端横屏提示遮罩 -->
+<div id="rotate-overlay" class="rotate-overlay" style="display:none;">
+    <div class="rotate-icon">📱</div>
+    <p class="rotate-title">请旋转手机</p>
+    <p class="rotate-sub">Milthm 谱面为横屏设计，竖屏无法正常游玩</p>
+</div>
 
 </body>
 </html>
